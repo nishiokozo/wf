@@ -13,6 +13,7 @@
 #include <EGL/egl.h>
 #include <math.h>
 #include "bcm_host.h"
+#include "vec.h"
 
 typedef struct {
   EGLNativeWindowType  nativeWin;
@@ -101,7 +102,7 @@ EGLBoolean WinCreate(ScreenSettings *sc)
   dispman_display = vc_dispmanx_display_open(0);
   dispman_update = vc_dispmanx_update_start(0);
   dispman_element = vc_dispmanx_element_add(dispman_update, dispman_display,
-             0, &dst_rect, 0, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 0, 0);
+             0, &dst_rect, 0, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 0, DISPMANX_NO_ROTATE);
   vc_dispmanx_update_submit_sync(dispman_update);
   nativewindow.element = dispman_element;
   nativewindow.width = width;
@@ -155,7 +156,7 @@ GLuint LoadShader(GLenum type, const char *shaderSource)
     GLint infoLen = 0;
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
     if (infoLen > 0) {
-      char* infoLog = malloc(sizeof(char) * infoLen);
+      char* infoLog = (char*)malloc(sizeof(char) * infoLen);
       glGetShaderInfoLog(shader, infoLen, NULL, infoLog);
       printf("Error compiling shader:\n%s\n", infoLog);
       free(infoLog);
@@ -187,7 +188,7 @@ int InitShaders(GLuint *program, char const *vShSrc, char const *fShSrc)
     GLint infoLen = 0;
     glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &infoLen);
     if (infoLen > 0) {
-      char* infoLog = malloc(sizeof(char) * infoLen);
+      char* infoLog = (char*)malloc(sizeof(char) * infoLen);
       glGetProgramInfoLog(prog, infoLen, NULL, infoLog);
       printf("Error linking program:\n%s\n", infoLog);
       free ( infoLog );

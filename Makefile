@@ -24,11 +24,11 @@ all: $(BIN) $(LIB)
 	@rm -f $@ 
 	$(CXX) $(CFLAGS) $(INCLUDES) -g -c $< -o $@ -Wno-deprecated-declarations
 
-wf.o: wf.cpp
+wf.o: wf.cpp  vec.h
 	@rm -f $@ 
 	$(CXX) $(CFLAGS) $(INCLUDES) -g -c $< -o $@ -Wno-deprecated-declarations
 
-vec.o: vec.cpp
+vec.o: vec.cpp vec.h
 	@rm -f $@ 
 	$(CXX) $(CFLAGS) $(INCLUDES) -g -c $< -o $@ -Wno-deprecated-declarations
 

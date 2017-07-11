@@ -185,12 +185,12 @@ public:
 	}
 
 
-	void Print()
+	void print()
 	{
 		printf("(vec2)%9.6f %9.6f\n", x, y );
 	}
 
-	void Print( const char* str )
+	void print( const char* str )
 	{
 		printf("%s%9.6f %9.6f", str, x, y );
 	}
@@ -356,12 +356,12 @@ public:
 	}
 
 
-	void Print()
+	void print()
 	{
 		printf("(vec3)%9.6f %9.6f %9.6f\n", x, y, z );
 	}
 
-	void Print( const char* str )
+	void print( const char* str )
 	{
 		printf("%s<%9.6f %9.6f %9.6f>\n", str, x, y, z );
 	}
@@ -536,12 +536,12 @@ public:
 */
 
 
-	void Print()
+	void print()
 	{
 		printf("(vec4)%9.6f %9.6f %9.6f %9.6f\n", x, y, z, w );
 	}
 
-	void Print( const char* str )
+	void print( const char* str )
 	{
 		printf("%s<%9.6f %9.6f %9.6f %9.6f>\n", str, x, y, z, w );
 	}
@@ -700,13 +700,13 @@ public:
 	
 
 
-	void RotateXYZ( vec3 rot )
+	void rotXYZ( vec3 rot )
 	{
-		this->RotateX( rot.x );
-		this->RotateY( rot.y );
-		this->RotateZ( rot.z );
+		this->rotX( rot.x );
+		this->rotY( rot.y );
+		this->rotZ( rot.z );
 	}
-	void RotateX( float f)
+	void rotX( float f)
 	{
 		float	c = cos(f);
 		float	s = sin(f);
@@ -716,7 +716,7 @@ public:
 			0,  s,  c
 		);
 	}
-	void RotateY( float f)
+	void rotY( float f)
 	{
 		float	c = cos(f);
 		float	s = sin(f);
@@ -726,7 +726,7 @@ public:
 			s,  0,  c
 		);
 	}
-	void RotateZ( float f)
+	void rotZ( float f)
 	{
 		float	c = cos(f);
 		float	s = sin(f);
@@ -747,7 +747,7 @@ public:
 		m[1][0] = 0.0f;	m[1][1] =   c;	m[1][2] =  -s;	
 		m[2][0] = 0.0f;	m[2][1] =   s;	m[2][2] =   c;	
 	}
-	void RotateY( float f )
+	void rotY( float f )
 	{
 //		MAT3& m = this->m;
 		float	c = cos(f);
@@ -757,7 +757,7 @@ public:
 		m[1][0] = 0.0f;	m[1][1] = 0.0f;	m[1][2] = 0.0f;	
 		m[2][0] =    s;	m[2][1] = 0.0f;	m[2][2] =   c;	
 	}
-	void RotateZ( float f )
+	void rotZ( float f )
 	{
 //		MAT3& m = this->m;
 		float	c = cos(f);
@@ -769,27 +769,27 @@ public:
 	}
 */
 
-	void Scale( float x, float y, float z )
+	void scale( float x, float y, float z )
 	{
 		m[0][0] *= x;
 		m[1][1] *= y;
 		m[2][2] *= z;
 	}
-	void Scale( vec3 scale )
+	void scale( vec3 scale )
 	{
 		m[0][0] *= scale.x;
 		m[1][1] *= scale.y;
 		m[2][2] *= scale.z;
 	}
 
-	void Print()
+	void print()
 	{
 		printf("mat3:\n");
 		printf("%9.6f %9.6f %9.6f \n", m[0][0], m[0][1], m[0][2] );
 		printf("%9.6f %9.6f %9.6f \n", m[1][0], m[1][1], m[1][2] );
 		printf("%9.6f %9.6f %9.6f \n", m[2][0], m[2][1], m[2][2] );
 	}
-	void Print( const char* str )
+	void print( const char* str )
 	{
 		printf("mat3:%s\n", str);
 		printf("%9.6f %9.6f %9.6f \n", m[0][0], m[0][1], m[0][2] );
@@ -806,7 +806,6 @@ public:
 	union
 	{
 		float	m_array[16];
-//		float	m[4][4];
 		MAT4	m;
 	};
 	mat4()
@@ -881,12 +880,14 @@ public:
 		return	ret;
 	}
 
+/*
 	mat4& operator=( const mat4& a ) 
 	{
 		*this = a;
 		
 		return *this;
 	}
+*/
 	mat4& operator*=( const mat4& a ) 
 	{
 //		mat4_multiply( m_array, m_array, a.m_array );
@@ -923,6 +924,7 @@ public:
 		mat4_invers( *this, m );
 	}
 */
+/*
 	vec3 GetVecX()
 	{
 		return vec3( m[0][0], m[0][1], m[0][2] );
@@ -939,32 +941,52 @@ public:
 	{
 		return vec3( m[3][0], m[3][1], m[3][2] );
 	}
-	void SetVecX( vec3 v )
+	void setVecX( vec3 v )
 	{
 		m[0][0] = v.x; 
 		m[0][1] = v.y; 
 		m[0][2] = v.z;
 	}
-	void SetVecY( vec3 v )
+	void setVecY( vec3 v )
 	{
 		m[1][0] = v.x; 
 		m[1][1] = v.y; 
 		m[1][2] = v.z;
 	}
-	void SetVecZ( vec3 v )
+	void setVecZ( vec3 v )
 	{
 		m[2][0] = v.x; 
 		m[2][1] = v.y; 
 		m[2][2] = v.z;
 	}
-	void SetVecT( vec3 v )
+	void setVecT( vec3 v )
 	{
 		m[3][0] = v.x; 
 		m[3][1] = v.y; 
 		m[3][2] = v.z;
 	}
+*/
 
-	void LookAt( vec3 pos, vec3 at, vec3 up )
+	//-----------------------------------------------------------------------------
+	void setPerspective( float fovy, float aspect, float zNear, float zFar)
+	//-----------------------------------------------------------------------------
+	{
+		float p = 1.0f / tanf(fovy *(M_PI/360.0));
+
+		float	z2 = zFar;
+		float	z1 = zNear;
+
+		*this =  mat4(
+			p / aspect, 0.0,	0.0,        				 0.0,
+			0.0,        p,    	0.0,        				 0.0,
+			0.0,        0.0,  	(z2+z1)         /(z1-z2), 	-1.0,
+			0.0,    	0.0,	(2.0 * z2 * z1) /(z1-z2),   0.0
+		);
+	}
+
+	//-----------------------------------------------------------------------------
+	void lookAt( vec3 pos, vec3 at, vec3 up )
+	//-----------------------------------------------------------------------------
 	{
 		vec3	z = normalizXe(at-pos);
 		vec3	x = cross( up, z );
@@ -975,7 +997,9 @@ public:
 		m[2][0] =z.x;	m[2][1] =z.y;	m[2][2] =z.z;	m[2][3] = 0.0f;
 		m[3][0] =pos.x;	m[3][1] =pos.y;	m[3][2] =pos.z;	m[3][3] = 1.0f;
 	}
-	void LookFor( vec3 pos, vec3 z, vec3 up )
+	//-----------------------------------------------------------------------------
+	void lookFor( vec3 pos, vec3 z, vec3 up )
+	//-----------------------------------------------------------------------------
 	{
 		vec3	x = cross( up, z );
 		vec3	y = cross( z, x );
@@ -985,13 +1009,17 @@ public:
 		m[2][0] =z.x;	m[2][1] =z.y;	m[2][2] =z.z;	m[2][3] = 0.0f;
 		m[3][0] =pos.x;	m[3][1] =pos.y;	m[3][2] =pos.z;	m[3][3] = 1.0f;
 	}
-	void RotateXYZ( vec3 rot )
+	//-----------------------------------------------------------------------------
+	void rotXYZ( vec3 rot )
+	//-----------------------------------------------------------------------------
 	{
-		this->RotateX( rot.x );
-		this->RotateY( rot.y );
-		this->RotateZ( rot.z );
+		this->rotX( rot.x );
+		this->rotY( rot.y );
+		this->rotZ( rot.z );
 	}
-	void RotateX( float f)
+	//-----------------------------------------------------------------------------
+	void rotX( float f)
+	//-----------------------------------------------------------------------------
 	{
 		float	c = cos(f);
 		float	s = sin(f);
@@ -1002,7 +1030,9 @@ public:
 			0,  0,  0,  1
 		);
 	}
-	void RotateY( float f)
+	//-----------------------------------------------------------------------------
+	void rotY( float f)
+	//-----------------------------------------------------------------------------
 	{
 		float	c = cos(f);
 		float	s = sin(f);
@@ -1013,7 +1043,9 @@ public:
 			0,  0,  0,  1
 		);
 	}
-	void RotateZ( float f)
+	//-----------------------------------------------------------------------------
+	void rotZ( float f)
+	//-----------------------------------------------------------------------------
 	{
 		float	c = cos(f);
 		float	s = sin(f);
@@ -1024,33 +1056,43 @@ public:
 			0,  0,  0,  1
 		);
 	}
-	void Tlanslate( vec3 vec )
+	//-----------------------------------------------------------------------------
+	void tlans( vec3 vec )
+	//-----------------------------------------------------------------------------
 	{
 		m[3][0] += vec.x;
 		m[3][1] += vec.y;
 		m[3][2] += vec.z;
 	}
-	void Tlanslate( float x, float y, float z )
+	//-----------------------------------------------------------------------------
+	void tlans( float x, float y, float z )
+	//-----------------------------------------------------------------------------
 	{
 		m[3][0] += x;
 		m[3][1] += y;
 		m[3][2] += z;
 	}
 	
-	void Scale( float x, float y, float z )
+	//-----------------------------------------------------------------------------
+	void scale( float x, float y, float z )
+	//-----------------------------------------------------------------------------
 	{
 		m[0][0] *= x;
 		m[1][1] *= y;
 		m[2][2] *= z;
 	}
-	void Scale( vec3 scale )
+	//-----------------------------------------------------------------------------
+	void scale( vec3 scale )
+	//-----------------------------------------------------------------------------
 	{
 		m[0][0] *= scale.x;
 		m[1][1] *= scale.y;
 		m[2][2] *= scale.z;
 	}
 
-	void Print()
+	//-----------------------------------------------------------------------------
+	void print()
+	//-----------------------------------------------------------------------------
 	{
 		printf("mat4:\n");
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[0][0], m[0][1], m[0][2], m[0][3] );
@@ -1058,7 +1100,9 @@ public:
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[2][0], m[2][1], m[2][2], m[2][3] );
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[3][0], m[3][1], m[3][2], m[3][3] );
 	}
-	void Print( const char* str )
+	//-----------------------------------------------------------------------------
+	void print( const char* str )
+	//-----------------------------------------------------------------------------
 	{
 		printf("mat4:%s\n", str);
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[0][0], m[0][1], m[0][2], m[0][3] );

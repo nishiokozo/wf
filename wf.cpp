@@ -245,8 +245,6 @@ int main ( int argc, char *argv[] )
 
 		m_hdlMat = glGetUniformLocation( g_program, "Mat" );
   g_sp.aPosition = glGetAttribLocation(g_program, "aPosition");
-//  g_sp.aTex = glGetAttribLocation(g_program, "aTex");
-//  g_sp.uFrame  = glGetUniformLocation(g_program, "uFrame");
 
   glClearColor(0.0f, 0.3f, 0.0f, 0.5f);
 
@@ -263,12 +261,17 @@ int main ( int argc, char *argv[] )
 			matView.identity();
 
 			// 射影行列をセット
-//			mat4_perspective( matPers,   27.5f, 1.33, 0.1f, 100.0f ); 
+			matPers.setPerspective( 27.5f, 1.33, 0.1f, 100.0f ); 
 
 			// モデル行列をセット
 			matModel.identity();
+
+static float rad =0;
+rad += RAD(1);
+			matModel.rotX(rad);
+
 			
-			mat4 mat = matModel;
+			mat4 mat = matModel;//*matPers;
 
 			glUniformMatrix4fv( m_hdlMat         , 1, GL_FALSE, mat.GetArray() );
 

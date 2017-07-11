@@ -480,12 +480,14 @@ void mat4_perspective( mat4& m, float fovy, float aspect, float zNear, float zFa
 	float	z2 = zFar;
 	float	z1 = zNear;
 
-	m = mat4(
+	mat4 tmp =  mat4(
 		p / aspect, 0.0,	0.0,        				 0.0,
 		0.0,        p,    	0.0,        				 0.0,
 		0.0,        0.0,  	(z2+z1)         /(z1-z2), 	-1.0,
 		0.0,    	0.0,	(2.0 * z2 * z1) /(z1-z2),   0.0
 	);
+
+	m *= tmp;
 }
 //-----------------------------------------------------------------------------
 void mat4_perspective(float* m, float fovy, float aspect, float zNear, float zFar)

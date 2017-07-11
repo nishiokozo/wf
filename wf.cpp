@@ -217,195 +217,6 @@ void createBuffer()
 }
 
 
-#define	M00	0
-#define	M01	1
-#define	M02	2
-#define	M03	3
-#define	M10	4
-#define	M11	5
-#define	M12	6
-#define	M13	7
-#define	M20	8
-#define	M21	9
-#define	M22	10
-#define	M23	11
-#define	M30	12
-#define	M31	13
-#define	M32	14
-#define	M33	15
-typedef	float	matrix[16];
-
-//-----------------------------------------------------------------------------
-void	matrix_multiply( matrix m, matrix a, matrix b )
-//-----------------------------------------------------------------------------
-{
-
-	float	a00 = a[M00];
-	float	a01 = a[M01];
-	float	a02 = a[M02];
-	float	a03 = a[M03];
-	float	a10 = a[M10];
-	float	a11 = a[M11];
-	float	a12 = a[M12];
-	float	a13 = a[M13];
-	float	a20 = a[M20];
-	float	a21 = a[M21];
-	float	a22 = a[M22];
-	float	a23 = a[M23];
-	float	a30 = a[M30];
-	float	a31 = a[M31];
-	float	a32 = a[M32];
-	float	a33 = a[M33];
-
-	float	b00 = b[M00];
-	float	b01 = b[M01];
-	float	b02 = b[M02];
-	float	b03 = b[M03];
-	float	b10 = b[M10];
-	float	b11 = b[M11];
-	float	b12 = b[M12];
-	float	b13 = b[M13];
-	float	b20 = b[M20];
-	float	b21 = b[M21];
-	float	b22 = b[M22];
-	float	b23 = b[M23];
-	float	b30 = b[M30];
-	float	b31 = b[M31];
-	float	b32 = b[M32];
-	float	b33 = b[M33];
-
-	m[M00] = a00 * b00 +  a01 * b10 +  a02 * b20 +  a03 * b30;
-	m[M01] = a00 * b01 +  a01 * b11 +  a02 * b21 +  a03 * b31;
-	m[M02] = a00 * b02 +  a01 * b12 +  a02 * b22 +  a03 * b32;
-	m[M03] = a00 * b03 +  a01 * b13 +  a02 * b23 +  a03 * b33;
-
-	m[M10] = a10 * b00 +  a11 * b10 +  a12 * b20 +  a13 * b30;
-	m[M11] = a10 * b01 +  a11 * b11 +  a12 * b21 +  a13 * b31;
-	m[M12] = a10 * b02 +  a11 * b12 +  a12 * b22 +  a13 * b32;
-	m[M13] = a10 * b03 +  a11 * b13 +  a12 * b23 +  a13 * b33;
-
-	m[M20] = a20 * b00 +  a21 * b10 +  a22 * b20 +  a23 * b30;
-	m[M21] = a20 * b01 +  a21 * b11 +  a22 * b21 +  a23 * b31;
-	m[M22] = a20 * b02 +  a21 * b12 +  a22 * b22 +  a23 * b32;
-	m[M23] = a20 * b03 +  a21 * b13 +  a22 * b23 +  a23 * b33;
-
-	m[M30] = a30 * b00 +  a31 * b10 +  a32 * b20 +  a33 * b30;
-	m[M31] = a30 * b01 +  a31 * b11 +  a32 * b21 +  a33 * b31;
-	m[M32] = a30 * b02 +  a31 * b12 +  a32 * b22 +  a33 * b32;
-	m[M33] = a30 * b03 +  a31 * b13 +  a32 * b23 +  a33 * b33;
-}
-//-----------------------------------------------------------------------------
-void	matrix_getTranslate( float* m, float x, float y, float z )
-//-----------------------------------------------------------------------------
-{
-	m[M00] = 1.0f;	m[M01] = 0.0f;	m[M02] = 0.0f;	m[M03] = 0.0f;
-	m[M10] = 0.0f;	m[M11] = 1.0f;	m[M12] = 0.0f;	m[M13] = 0.0f;
-	m[M20] = 0.0f;	m[M21] = 0.0f;	m[M22] = 1.0f;	m[M23] = 0.0f;
-	m[M30] =   x;	m[M31] =   y;	m[M32] =   z;	m[M33] = 1.0f;
-}
-//-----------------------------------------------------------------------------
-void	matrix_getRotateX( matrix m, float th )
-//-----------------------------------------------------------------------------
-{
-	float	c = cos(th);
-	float	s = sin(th);
-
-	m[M00] = 1.0f;	m[M01] = 0.0f;	m[M02] = 0.0f;	m[M03] = 0.0f;
-	m[M10] = 0.0f;	m[M11] =   c;	m[M12] =  -s;	m[M13] = 0.0f;
-	m[M20] = 0.0f;	m[M21] =   s;	m[M22] =   c;	m[M23] = 0.0f;
-	m[M30] = 0.0f;	m[M31] = 0.0f;	m[M32] = 0.0f;	m[M33] = 1.0f;
-}
-
-//-----------------------------------------------------------------------------
-void	matrix_getRotateY( matrix m, float th )
-//-----------------------------------------------------------------------------
-{
-	float	c = cos(th);
-	float	s = sin(th);
-
-	m[M00] =   c;	m[M01] = 0.0f;	m[M02] =  -s;	m[M03] = 0.0f;
-	m[M10] = 0.0f;	m[M11] = 1.0f;	m[M12] = 0.0f;	m[M13] = 0.0f;
-	m[M20] =   s;	m[M21] = 0.0f;	m[M22] =   c;	m[M23] = 0.0f;
-	m[M30] = 0.0f;	m[M31] = 0.0f;	m[M32] = 0.0f;	m[M33] = 1.0f;
-}
-//-----------------------------------------------------------------------------
-void	matrix_getRotateZ( matrix m, float th )
-//-----------------------------------------------------------------------------
-{
-	float	c = cos(th);
-	float	s = sin(th);
-
-	m[M00] =   c;	m[M01] =   -s;	m[M02] = 0.0f;	m[M03] = 0.0f;
-	m[M10] =   s;	m[M11] =    c;	m[M12] = 0.0f;	m[M13] = 0.0f;
-	m[M20] = 0.0f;	m[M21] = 0.0f;	m[M22] = 1.0f;	m[M23] = 0.0f;
-	m[M30] = 0.0f;	m[M31] = 0.0f;	m[M32] = 0.0f;	m[M33] = 1.0f;
-}
-
-
-//-----------------------------------------------------------------------------
-void	matrix_identity( matrix m )
-//-----------------------------------------------------------------------------
-{
-	m[M00] = 1.0f;	m[M01] = 0.0f;	m[M02] = 0.0f;	m[M03] = 0.0f;
-	m[M10] = 0.0f;	m[M11] = 1.0f;	m[M12] = 0.0f;	m[M13] = 0.0f;
-	m[M20] = 0.0f;	m[M21] = 0.0f;	m[M22] = 1.0f;	m[M23] = 0.0f;
-	m[M30] = 0.0f;	m[M31] = 0.0f;	m[M32] = 0.0f;	m[M33] = 1.0f;
-}
-//-----------------------------------------------------------------------------
-void	matrix_rotateX( matrix m, float th )
-//-----------------------------------------------------------------------------
-{
-	matrix a;
-	matrix_getRotateX(a,th);
-
-	matrix_multiply( m, m, a );
-}
-//-----------------------------------------------------------------------------
-void	matrix_rotateY( matrix m, float th )
-//-----------------------------------------------------------------------------
-{
-	matrix a;
-	matrix_getRotateY(a,th);
-
-	matrix_multiply( m, m, a );
-}
-//-----------------------------------------------------------------------------
-void	matrix_rotateZ( matrix m, float th )
-//-----------------------------------------------------------------------------
-{
-	matrix a;
-	matrix_getRotateZ(a,th);
-
-	matrix_multiply( m, m, a );
-}
-//-----------------------------------------------------------------------------
-void matrix_perspective (matrix m, float fovy, float aspect, float zNear, float zFar)
-//-----------------------------------------------------------------------------
-{
-        float f = 1.0f / tanf(fovy * (M_PI/360.0));
-
-        m[0] = f / aspect;
-        m[1] = 0.0;
-        m[2] = 0.0;
-        m[3] = 0.0;
-
-        m[4] = 0.0;
-        m[5] = f;
-        m[6] = 0.0;
-        m[7] = 0.0;
-
-        m[8] = 0.0;
-        m[9] = 0.0;
-        m[10] = (zFar + zNear) / (zNear - zFar);
-        m[11] = -1.0;
-
-        m[12] = 0.0;
-        m[13] = 0.0;
-        m[14] = 2.0 * zFar * zNear / (zNear - zFar);
-        m[15] = 0.0;
-}
-
-
 //-----------------------------------------------------------------------------
 int main ( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
@@ -423,19 +234,12 @@ int main ( int argc, char *argv[] )
   res = InitShaders(&g_program, vShaderSrc, fShaderSrc);
   if (!res) return 0;
 
-	float m_matWorld[16];			// ワールド行列
-	float m_matView[16];
-	float m_matProj[16];
-	float m_matModel[16];
-
-float m_matIdentity[16] = {
-    1.0f, 0.0f, 0.0f, 0.0f,
-    0.0f, 1.0f, 0.0f, 0.0f,
-    0.0f, 0.0f, 1.0f, 0.0f,
-    0.0f, 0.0f, 0.0f, 1.0f
-};
-
-
+	mat4	matWorld;
+	mat4	matPers;
+	mat4	matView;
+	mat4	matModel;
+	
+	
 
   createBuffer();
 
@@ -453,31 +257,20 @@ float m_matIdentity[16] = {
     glClear(GL_COLOR_BUFFER_BIT);
 
 			// ワールド行列に対して回転をかける
-			matrix_identity( m_matWorld );
+			matWorld.identity();
 
 			// カメラ( ビュー行列 )を設定
-			{
-				matrix_identity( m_matView );
-				matrix_getTranslate( m_matView, 0.2, 0.2, 0.0 );
-			}
+			matView.identity();
 
-			// ワールド行列×ビュー行列×射影行列をセット
-			{
-				matrix_multiply( m_matModel, m_matView, m_matWorld );
+			// 射影行列をセット
+//			mat4_perspective( matPers,   27.5f, 1.33, 0.1f, 100.0f ); 
 
-				matrix_identity( m_matProj );
-				float pers = 27.5;
-				float aspect = 1.33;
-				float n = 0.1;
-				float f = 100;
-//				matrix_perspective( m_matProj, pers, aspect, n, f);
+			// モデル行列をセット
+			matModel.identity();
+			
+			mat4 mat = matModel;
 
-				matrix_multiply( m_matModel, m_matProj, m_matModel );
-
-
-				glUniformMatrix4fv( m_hdlMat         , 1, GL_FALSE, m_matModel);
-
-			}
+			glUniformMatrix4fv( m_hdlMat         , 1, GL_FALSE, mat.GetArray() );
 
 //	void Draw ()
 	{

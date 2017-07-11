@@ -691,7 +691,7 @@ public:
 
 	float* GetArray(){ return m_array; };
 
-	void Identity()
+	void identity()
 	{
 		m[0][0] = 1.0f;	m[0][1] = 0.0f;	m[0][2] = 0.0f;
 		m[1][0] = 0.0f;	m[1][1] = 1.0f;	m[1][2] = 0.0f;
@@ -897,7 +897,7 @@ public:
 
 	float* GetArray(){ return m_array; };
 
-	void Identity()
+	void identity()
 	{
 		m[0][0] = 1.0f;	m[0][1] = 0.0f;	m[0][2] = 0.0f;	m[0][3] = 0.0f;
 		m[1][0] = 0.0f;	m[1][1] = 1.0f;	m[1][2] = 0.0f;	m[1][3] = 0.0f;

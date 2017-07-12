@@ -26,19 +26,6 @@ typedef struct {
   int         height;
 } ScreenSettings;
 
-const char vShaderSrc[] =
- "uniform	mat4	Mat;	  					\n"
-  "attribute vec3  aPosition;\n"
-//  "attribute vec2  aTex;     \n"
-//  "varying   vec2  vTex;\n"
-//  "uniform   float uFrame;\n"
-  "void main()        \n"
-  "{                  \n"
-//  "  vTex = aTex;     \n"
-//  "  gl_Position = vec4(aPosition.x - uFrame, aPosition.y + uFrame, 0, 1);\n"
-//  "  gl_Position = vec4(aPosition.x , aPosition.y, 0, 1);\n"
-  "   gl_Position = Mat * vec4(aPosition,1);   				\n"
-  "}                  \n";
 
 const char fShaderSrc[] =
   "precision mediump float;\n"\
@@ -50,7 +37,7 @@ const char fShaderSrc[] =
   "}                  \n";
 
 typedef struct {
-  GLint   aPosition;
+  GLint   vecPos;
 //  GLint   aTex;
 //  GLint   uFrame;
 } ShaderParams;
@@ -60,13 +47,8 @@ typedef struct {
 //    GLfloat u, v;
 } VertexType;
 
-VertexType vObj[] = {
-  {.x = -0.5f, .y = -0.5f, .z = 0.0f},//, .u = 0.0f, .v = 1.0f},
-  {.x =  0.5f, .y = -0.5f, .z = 0.0f},//, .u = 1.0f, .v = 1.0f},
-  {.x =  0.0f, .y =  0.5f, .z = 0.0f},//, .u = 0.5f, .v = 0.0f},
-};
 
-unsigned short iObj[] = {
+unsigned short tblIndex[] = {
   0, 1, 2
 };
 
@@ -203,48 +185,58 @@ int InitShaders(GLuint *program, char const *vShSrc, char const *fShSrc)
   return GL_TRUE;
 }
 
-void createBuffer()
-{
-  glGenBuffers(1, &g_vbo);
-  // vertex buffer
-  glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vObj), vObj, GL_STATIC_DRAW);
-
-  // index buffer
-  glGenBuffers(1, &g_ibo);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(iObj), iObj, GL_STATIC_DRAW);
-}
 
 
 //-----------------------------------------------------------------------------
 int main ( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
 {
-	GLuint m_hdlMat;	  // シェーダーMatのハンドル
+	GLuint m_hdl_matLocal;	  // シェーダーmatLocalのハンドル
 
   unsigned int frames = 0;
   int res;
-
-  bcm_host_init();
-  res = WinCreate(&g_sc);
-  if (!res) return 0;
-  res = SurfaceCreate(&g_sc);
-  if (!res) return 0;
-  res = InitShaders(&g_program, vShaderSrc, fShaderSrc);
-  if (!res) return 0;
 
 	mat4	matWorld;
 	mat4	matPers;
 	mat4	matView;
 	mat4	matModel;
 	
-	
 
-  createBuffer();
+  bcm_host_init();
+  res = WinCreate(&g_sc);
+  if (!res) return 0;
+  res = SurfaceCreate(&g_sc);
+  if (!res) return 0;
+const char vShaderSrc[] =
+  "uniform	mat4	matLocal;	  						\n"
+  "attribute vec3  vecPos;						\n"
+  "void main() 									    \n"
+  "{ 						    			        \n"
+  "   gl_Position = matLocal * vec4(vecPos,1)  ;   		\n"
+  "}                 								\n";
+  res = InitShaders(&g_program, vShaderSrc, fShaderSrc);
+  if (!res) return 0;
 
-		m_hdlMat = glGetUniformLocation( g_program, "Mat" );
-  g_sp.aPosition = glGetAttribLocation(g_program, "aPosition");
+//  createBuffer();
+{
+  glGenBuffers(1, &g_vbo);
+  // vertex buffer
+  glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
+VertexType tblVert[] = {
+  {.x = -0.433, .y = -0.25, .z = 0.0f},//, .u = 0.0f, .v = 1.0f},
+  {.x =  0.433, .y = -0.25, .z = 0.0f},//, .u = 1.0f, .v = 1.0f},
+  {.x =  0.0  , .y =  0.5 , .z = 0.0f},//, .u = 0.5f, .v = 0.0f},
+};
+  glBufferData(GL_ARRAY_BUFFER, sizeof(tblVert), tblVert, GL_STATIC_DRAW);
+
+  // index buffer
+  glGenBuffers(1, &g_ibo);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(tblIndex), tblIndex, GL_STATIC_DRAW);
+}
+
+		m_hdl_matLocal = glGetUniformLocation( g_program, "matLocal" );
+  g_sp.vecPos = glGetAttribLocation(g_program, "vecPos");
 
   glClearColor(0.0f, 0.3f, 0.0f, 0.5f);
 
@@ -261,28 +253,63 @@ int main ( int argc, char *argv[] )
 			matView.identity();
 
 			// 射影行列をセット
-			matPers.setPerspective( 27.5f, 1.33, 0.1f, 100.0f ); 
+//			matPers.setPerspective( 27.5f, 1.33, 0.1f, 100.0f ); 
+
+	//-----------------------------------------------------------------------------
+	{
+		float fovy	=	27.5; 
+		float a=	1920.0f/1080.0f; 
+		float zNear	=	0.1; 
+		float zFar	=	100;
+
+		float p = 1.0f / tanf(fovy *(M_PI/360.0));
+
+		float	z2 = zFar;
+		float	z1 = zNear;
+
+		matPers =  mat4(
+			p / a,		 0.0,	0.0,        				 0.0,
+			0.0,        p,    	0.0,        				 0.0,
+			0.0,        0.0,  	(z2+z1)         /(z1-z2), 	-1.0,
+			0.0,    	0.0,	(2.0 * z2 * z1) /(z1-z2),   0.0
+		);
+
+		matPers =  mat4(
+			p / a, 		0.0,	0.0,    0.0,
+			0.0,        p,    	0.0,    0.0,
+			0.0,        0.0,  	1.0,	0.0,
+			0.0,    	0.0,	0.0,	 0.0
+		);
+		matPers =  mat4(
+			1 / a, 		0.0,	0.0,    0.0,
+			0.0,        1,   	0.0,    0.0,
+			0.0,        0.0,  	1.0,	0.0,
+			0.0,    	0.0,	0.0,	1.0
+		);
+	}
+
 
 			// モデル行列をセット
 			matModel.identity();
 
 static float rad =0;
 rad += RAD(1);
-			matModel.rotX(rad);
+			matModel.rotZ(rad);
+			matModel.trans(-0.5,0,0.5);
 
 			
-			mat4 mat = matModel;//*matPers;
+			mat4 mat = matModel*matPers;
 
-			glUniformMatrix4fv( m_hdlMat         , 1, GL_FALSE, mat.GetArray() );
+			glUniformMatrix4fv( m_hdl_matLocal         , 1, GL_FALSE, mat.GetArray() );
 
 //	void Draw ()
 	{
 	  glUseProgram(g_program);
 	  glBindBuffer(GL_ARRAY_BUFFER, g_vbo);
 	  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ibo);
-	  glEnableVertexAttribArray(g_sp.aPosition);
+	  glEnableVertexAttribArray(g_sp.vecPos);
 	//  glEnableVertexAttribArray(g_sp.aTex);
-	  glVertexAttribPointer(g_sp.aPosition, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	  glVertexAttribPointer(g_sp.vecPos, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	//  glVertexAttribPointer(g_sp.aTex, 2, GL_FLOAT, GL_FALSE, 20, (void*)12);
 	  glEnableVertexAttribArray(0);
 	  glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, 0);

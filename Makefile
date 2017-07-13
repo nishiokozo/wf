@@ -1,5 +1,5 @@
-OBJS=wf.o vect.o
-BIN=wf.bin
+OBJS=main.o vect.o
+BIN=main.bin
 
 
 
@@ -24,7 +24,7 @@ all: $(BIN) $(LIB)
 	@rm -f $@ 
 	$(CXX) $(CFLAGS) $(INCLUDES) -g -c $< -o $@ -Wno-deprecated-declarations
 
-wf.o: wf.cpp  vect.h
+main.o: main.cpp  vect.h
 	@rm -f $@ 
 	$(CXX) $(CFLAGS) $(INCLUDES) -g -c $< -o $@ -Wno-deprecated-declarations
 

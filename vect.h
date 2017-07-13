@@ -3,13 +3,13 @@
 typedef	float	MAT3[3][3];
 typedef	float	MAT4[4][4];
 
-void	mat4_rotateX( float* m, float th );
-void	mat4_rotateY( float* m, float th );
-void	mat4_rotateZ( float* m, float th );
+void	vect44_rotateX( float* m, float th );
+void	vect44_rotateY( float* m, float th );
+void	vect44_rotateZ( float* m, float th );
 
 
 #define	pi	M_PI
-class	ivec3
+class	ivect3
 {
 public:
 	union
@@ -42,7 +42,7 @@ typedef	struct
 	float	w;	
 } vector;
 
-class	vec2
+class	vect2
 {
 public:
 
@@ -61,34 +61,34 @@ public:
 		float	g;	
 	};
 
-	vec2( const float ax, const float ay )
+	vect2( const float ax, const float ay )
 	{
 		x = ax;
 		y = ay;
 	}
-	vec2(){};
+	vect2(){};
 
-	vec2( float ax, float ay, float az )
+	vect2( float ax, float ay, float az )
 	{
 		x = ax;
 		y = ay;
 	}
 
-	vec2& operator*=( const vec2& v ) 
+	vect2& operator*=( const vect2& v ) 
 	{
 		x *= v.x;
 		y *= v.y;
 		
 		return *this;
 	}
-	vec2& operator/=( const vec2& v ) 
+	vect2& operator/=( const vect2& v ) 
 	{
 		x /= v.x;
 		y /= v.y;
 		
 		return *this;
 	}
-	vec2& operator+=( const vec2& v ) 
+	vect2& operator+=( const vect2& v ) 
 	{
 		x += v.x;
 		y += v.y;
@@ -96,7 +96,7 @@ public:
 		return *this;
 	}
 
-	vec2& operator-=( const vec2& v ) 
+	vect2& operator-=( const vect2& v ) 
 	{
 		x -= v.x;
 		y -= v.y;
@@ -104,80 +104,80 @@ public:
 		return *this;
 	}
 
-	vec2 operator-() const
+	vect2 operator-() const
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = -x;
 		ret.y = -y;
 
 		return ret;
 	}
-	vec2 operator+() const
+	vect2 operator+() const
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = x;
 		ret.y = y;
 
 		return ret;
 	}
-	vec2 operator*( const float f ) const
+	vect2 operator*( const float f ) const
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = x * f;
 		ret.y = y * f;
 
 		return ret;
 	}
 
-	vec2 operator/( const float f ) const
+	vect2 operator/( const float f ) const
 	{
 		float a = 1.0f / f;
-		vec2	ret;
+		vect2	ret;
 		ret.x = x * a;
 		ret.y = y * a;
 
 		return ret;
 	}
 
-	vec2 operator*( const vec2& v ) const
+	vect2 operator*( const vect2& v ) const
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = x * v.x;
 		ret.y = y * v.y;
 
 		return ret;
 	}
 
-	vec2 operator-( const vec2& v ) const
+	vect2 operator-( const vect2& v ) const
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = x - v.x;
 		ret.y = y - v.y;
 
 		return ret;
 	}
 
-	vec2 operator+( const vec2& v ) const
+	vect2 operator+( const vect2& v ) const
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = x + v.x;
 		ret.y = y + v.y;
 
 		return ret;
 	}
 
-	friend	vec2 operator*( const float f, const vec2& v ) 
+	friend	vect2 operator*( const float f, const vect2& v ) 
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = f * v.x;
 		ret.y = f * v.y;
 		
 		return ret;
 	}
 
-	friend	vec2 operator+( const float f, const vec2& v ) 
+	friend	vect2 operator+( const float f, const vect2& v ) 
 	{
-		vec2	ret;
+		vect2	ret;
 		ret.x = f + v.x;
 		ret.y = f + v.y;
 		
@@ -187,7 +187,7 @@ public:
 
 	void print()
 	{
-		printf("(vec2)%9.6f %9.6f\n", x, y );
+		printf("(vect2)%9.6f %9.6f\n", x, y );
 	}
 
 	void print( const char* str )
@@ -198,9 +198,9 @@ public:
 };
 
 
-class vec3 : public vec2
+class vect3 : public vect2
 {
-//    friend class vec4;
+//    friend class vect4;
 
 public:
 /*
@@ -217,28 +217,28 @@ public:
 */
 	union	{	float	z,b; };
 	
-	vec3(){};
-	vec3( float a )
+	vect3(){};
+	vect3( float a )
 	{
 		x = a;
 		y = a;
 		z = a;
 	};
 
-	vec3( float _x, float _y, float _z )
+	vect3( float _x, float _y, float _z )
 	{
 		x = _x;
 		y = _y;
 		z = _z;
 	};
-	vec3( const vec2& v, float _z )
+	vect3( const vect2& v, float _z )
 	{
 		x = v.x;
 		y = v.y;
 		z = _z;
 	};
 
-	vec3& operator*=( const vec3& v ) 
+	vect3& operator*=( const vect3& v ) 
 	{
 		x *= v.x;
 		y *= v.y;
@@ -247,7 +247,7 @@ public:
 		return *this;
 	}
 
-	vec3& operator/=( const vec3& v ) 
+	vect3& operator/=( const vect3& v ) 
 	{
 		x /= v.x;
 		y /= v.y;
@@ -255,7 +255,7 @@ public:
 		
 		return *this;
 	}
-	vec3& operator+=( const vec3& v ) 
+	vect3& operator+=( const vect3& v ) 
 	{
 		x += v.x;
 		y += v.y;
@@ -264,7 +264,7 @@ public:
 		return *this;
 	}
 
-	vec3& operator-=( const vec3& v ) 
+	vect3& operator-=( const vect3& v ) 
 	{
 		x -= v.x;
 		y -= v.y;
@@ -273,71 +273,71 @@ public:
 		return *this;
 	}
 
-	vec3 operator-() const
+	vect3 operator-() const
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = -x;
 		ret.y = -y;
 		ret.z = -z;
 		return ret;
 	}
-	vec3 operator+() const
+	vect3 operator+() const
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = x;
 		ret.y = y;
 		ret.z = z;
 		return ret;
 	}
-	vec3 operator*( const float f ) const
+	vect3 operator*( const float f ) const
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = x * f;
 		ret.y = y * f;
 		ret.z = z * f;
 		return ret;
 	}
 
-	vec3 operator/( const float f ) const
+	vect3 operator/( const float f ) const
 	{
 		float a = 1.0f / f;
-		vec3	ret;
+		vect3	ret;
 		ret.x = x * a;
 		ret.y = y * a;
 		ret.z = z * a;
 		return ret;
 	}
 
-	vec3 operator*( const vec3& v ) const
+	vect3 operator*( const vect3& v ) const
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = x * v.x;
 		ret.y = y * v.y;
 		ret.z = z * v.z;
 		return ret;
 	}
 
-	vec3 operator-( const vec3& v ) const
+	vect3 operator-( const vect3& v ) const
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = x - v.x;
 		ret.y = y - v.y;
 		ret.z = z - v.z;
 		return ret;
 	}
 
-	vec3 operator+( const vec3& v ) const
+	vect3 operator+( const vect3& v ) const
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = x + v.x;
 		ret.y = y + v.y;
 		ret.z = z + v.z;
 		return ret;
 	}
 
-	friend	vec3 operator*( const float f, const vec3& v ) 
+	friend	vect3 operator*( const float f, const vect3& v ) 
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = f * v.x;
 		ret.y = f * v.y;
 		ret.z = f * v.z;
@@ -345,9 +345,9 @@ public:
 		return ret;
 	}
 
-	friend	vec3 operator+( const float f, const vec3& v ) 
+	friend	vect3 operator+( const float f, const vect3& v ) 
 	{
-		vec3	ret;
+		vect3	ret;
 		ret.x = f + v.x;
 		ret.y = f + v.y;
 		ret.z = f + v.z;
@@ -358,7 +358,7 @@ public:
 
 	void print()
 	{
-		printf("(vec3)%9.6f %9.6f %9.6f\n", x, y, z );
+		printf("(vect3)%9.6f %9.6f %9.6f\n", x, y, z );
 	}
 
 	void print( const char* str )
@@ -370,12 +370,12 @@ public:
 
 
 #if 1
-class vec4 : public vec3
+class vect4 : public vect3
 {
 public:
 	union{		float	w,a;		};
 #else
-class vec4
+class vect4
 {
 public:
 	union{		float	x,r;		};
@@ -384,8 +384,8 @@ public:
 	union{		float	w,a;		};
 #endif
 
-	vec4(){};
-	vec4( float f )
+	vect4(){};
+	vect4( float f )
 	{
 		x = f;
 		y = f;
@@ -393,50 +393,50 @@ public:
 		w = f;
 	};
 
-	vec4( float ax, float ay, float az, float aw )
+	vect4( float ax, float ay, float az, float aw )
 	{
 		x = ax;
 		y = ay;
 		z = az;
 		w = aw;
 	};
-	vec4( const vec3& v, float aw )
+	vect4( const vect3& v, float aw )
 	{
 		x = v.x;
 		y = v.y;
 		z = v.z;
 		w = aw;
 	};
-	vec4 operator+( const vec4& v )	const//	V + V
+	vect4 operator+( const vect4& v )	const//	V + V
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = x + v.x;
 		ret.y = y + v.y;
 		ret.z = z + v.z;
 		ret.w = w + v.w;
 		return ret;
 	}
-	vec4 operator-( const vec4& v )	const //	V - V
+	vect4 operator-( const vect4& v )	const //	V - V
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = x - v.x;
 		ret.y = y - v.y;
 		ret.z = z - v.z;
 		ret.w = w - v.w;
 		return ret;
 	}
-	vec4 operator*( const vec4& v )	const//	V * V
+	vect4 operator*( const vect4& v )	const//	V * V
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = x * v.x;
 		ret.y = y * v.y;
 		ret.z = z * v.z;
 		ret.w = w * v.w;
 		return ret;
 	}
-	vec4 operator/( const vec4& v )	const//	V / V
+	vect4 operator/( const vect4& v )	const//	V / V
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = x / v.x;
 		ret.y = y / v.y;
 		ret.z = z / v.z;
@@ -444,9 +444,9 @@ public:
 		return ret;
 	}
 
-	friend	vec4 operator*( const float f, const vec4& v )	//	f * V
+	friend	vect4 operator*( const float f, const vect4& v )	//	f * V
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = f * v.x;
 		ret.y = f * v.y;
 		ret.z = f * v.z;
@@ -456,23 +456,23 @@ public:
 	}
 /*
 
-	vec4 operator*( const vec4& v ) const
+	vect4 operator*( const vect4& v ) const
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = x * v.x;
 		ret.y = y * v.y;
 		ret.z = z * v.z;
 		ret.w = w * v.w;
 		return ret;
 	}
-	vec4 operator=( const vec4& v )
+	vect4 operator=( const vect4& v )
 	{
 		x =  v.x;
 		y =  v.y;
 		z =  v.z;
 		w =  v.w;
 	}
-	vec4& operator+=( const vec4& v )
+	vect4& operator+=( const vect4& v )
 	{
 		x += v.x;
 		y += v.y;
@@ -481,18 +481,18 @@ public:
 		
 		return *this;
 	}
-	vec4 operator*( const float f ) const
+	vect4 operator*( const float f ) const
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = x * f;
 		ret.y = y * f;
 		ret.z = z * f;
 		ret.w = w * f;
 		return ret;
 	}
-	vec4 operator/( const float f ) const
+	vect4 operator/( const float f ) const
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = x / f;
 		ret.y = y / f;
 		ret.z = z / f;
@@ -501,9 +501,9 @@ public:
 	}
 
 
-	friend	vec4 operator+( const float f, const vec4& v )
+	friend	vect4 operator+( const float f, const vect4& v )
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = f + v.x;
 		ret.y = f + v.y;
 		ret.z = f + v.z;
@@ -512,9 +512,9 @@ public:
 		return ret;
 	}
 
-	friend	vec4 operator-( const float f, const vec4& v )
+	friend	vect4 operator-( const float f, const vect4& v )
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = f - v.x;
 		ret.y = f - v.y;
 		ret.z = f - v.z;
@@ -523,9 +523,9 @@ public:
 		return ret;
 	}
 
-	friend	vec4 operator/( const float f, const vec4& v )
+	friend	vect4 operator/( const float f, const vect4& v )
 	{
-		vec4	ret;
+		vect4	ret;
 		ret.x = f / v.x;
 		ret.y = f / v.y;
 		ret.z = f / v.z;
@@ -538,7 +538,7 @@ public:
 
 	void print()
 	{
-		printf("(vec4)%9.6f %9.6f %9.6f %9.6f\n", x, y, z, w );
+		printf("(vect4)%9.6f %9.6f %9.6f %9.6f\n", x, y, z, w );
 	}
 
 	void print( const char* str )
@@ -551,40 +551,40 @@ public:
 float	vec3_dotproduct( float a[3], float b[3] );
 
 void	vec3_crossproduct( float v[3], float a[3], float b[3] );
-vec3	       cross( const vec3& a, const vec3& b );
+vect3	       cross( const vect3& a, const vect3& b );
 
 void	vec3_normalize( float v[3] );
-void	vec3_normalize( vec3* v );
+void	vec3_normalize( vect3* v );
 float	vec3_length( float v[3] );
-float	vec3_length( vec3& v );
+float	vec3_length( vect3& v );
 
 void	vec4_multiplyMatrix( float v[4], float m[16], float a[4] );
 
-float	dot( const vec3& a, const vec3& b );
+float	dot( const vect3& a, const vect3& b );
 
-//float	dot( vec4& a, vec3& b );
-//float	dot( vec3& a, vec4& b );
-//float	dot( vec4& a, vec4& b );
+//float	dot( vect4& a, vect3& b );
+//float	dot( vect3& a, vect4& b );
+//float	dot( vect4& a, vect4& b );
 
-vec3 refract( const vec3& a, const vec3& b, float n );
-vec3 reflect( const vec3& I, const vec3& N );
+vect3 refract( const vect3& a, const vect3& b, float n );
+vect3 reflect( const vect3& I, const vect3& N );
 
 //float	abs( float );
 float	max( float a, float b );
-vec3	max( float a, const vec3& b );
-vec3	max( const vec3& b, float a );
+vect3	max( float a, const vect3& b );
+vect3	max( const vect3& b, float a );
 float	min( float a, float b );
-vec3	min( float a, const vec3& b );
-vec3	min( const vec3& b, float a );
+vect3	min( float a, const vect3& b );
+vect3	min( const vect3& b, float a );
 
-vec3	mix( float f, const vec3& a, const vec3& b );
+vect3	mix( float f, const vect3& a, const vect3& b );
 float	mod( float a, float b );
-float	length( const vec2& a );
-float	length( const vec3& a );
-float	length( const vec3& a, const vec3& b );
-vec2	normalizXe( const vec2& a );
-vec3	normalizXe( const vec3& a );
-vec3	normalize( const vec3& a );
+float	length( const vect2& a );
+float	length( const vect3& a );
+float	length( const vect3& a, const vect3& b );
+vect2	normalizXe( const vect2& a );
+vect3	normalizXe( const vect3& a );
+vect3	normalize( const vect3& a );
 
 
 #define	RAD(n)	((n)*M_PI/180.0f)
@@ -608,8 +608,8 @@ vec3	normalize( const vec3& a );
 
 #define	rad(n)((n)*M_PI/180.0f)
 
-//void	mat4_multiply( float* m, const float* a, const float* b );
-void	mat4_multiply( float* m, const float* a, const float* y1 );
+//void	vect44_multiply( float* m, const float* a, const float* b );
+void	vect44_multiply( float* m, const float* a, const float* y1 );
 
 class	mat3
 {
@@ -637,9 +637,9 @@ public:
 		m[2][0] = m20;	m[2][1] = m21;	m[2][2] = m22;
 	}
 
-	friend	vec3 operator*( const vec3& a, const mat3& m )
+	friend	vect3 operator*( const vect3& a, const mat3& m )
 	{
-		vec3 ret;
+		vect3 ret;
 		ret.x = a.x*m.m[0][0] + a.y*m.m[1][0] + a.z*m.m[2][0];
 		ret.y = a.x*m.m[0][1] + a.y*m.m[1][1] + a.z*m.m[2][1];
 		ret.z = a.x*m.m[0][2] + a.y*m.m[1][2] + a.z*m.m[2][2];
@@ -647,15 +647,15 @@ public:
 		return ret;
 	}
 
-/*	friend	vec3& operator*=( vec3& v, mat3 m )
+/*	friend	vect3& operator*=( vect3& v, mat3 m )
 	{
 		v = v * m;
 	}
 */
 
-	vec3 operator*( const vec3& a ) const
+	vect3 operator*( const vect3& a ) const
 	{
-		vec3 ret;
+		vect3 ret;
 		ret.x = m[0][0]*a.x + m[0][1]*a.y + m[0][2]*a.z;
 		ret.y = m[1][0]*a.x + m[1][1]*a.y + m[1][2]*a.z;
 		ret.z = m[2][0]*a.x + m[2][1]*a.y + m[2][2]*a.z;
@@ -700,7 +700,7 @@ public:
 	
 
 
-	void rotXYZ( vec3 rot )
+	void rotXYZ( vect3 rot )
 	{
 		this->rotX( rot.x );
 		this->rotY( rot.y );
@@ -737,7 +737,7 @@ public:
 		);
 	}
 /*
-	vec3 RotateX( float f )
+	vect3 RotateX( float f )
 	{
 //		MAT3& m = this->m;
 		float	c = cos(f);
@@ -775,7 +775,7 @@ public:
 		m[1][1] *= y;
 		m[2][2] *= z;
 	}
-	void scale( vec3 scale )
+	void scale( vect3 scale )
 	{
 		m[0][0] *= scale.x;
 		m[1][1] *= scale.y;
@@ -800,7 +800,7 @@ public:
 };
 
 //---
-class	mat4
+class	vect44
 {
 public:
 	union
@@ -808,7 +808,7 @@ public:
 		float	m_array[16];
 		MAT4	m;
 	};
-	mat4()
+	vect44()
 	{
 		m[0][0] = 1.0f;	m[0][1] = 0.0f;	m[0][2] = 0.0f;	m[0][3] = 0.0f;
 		m[1][0] = 0.0f;	m[1][1] = 1.0f;	m[1][2] = 0.0f;	m[1][3] = 0.0f;
@@ -816,7 +816,7 @@ public:
 		m[3][0] = 0.0f;	m[3][1] = 0.0f;	m[3][2] = 0.0f;	m[3][3] = 1.0f;
 	}
 
-	mat4(
+	vect44(
 		float m00, float m01, float m02, float m03, 
 		float m10, float m11, float m12, float m13, 
 		float m20, float m21, float m22, float m23, 
@@ -829,9 +829,9 @@ public:
 		m[3][0] = m30;	m[3][1] = m31;	m[3][2] = m32;	m[3][3] = m33;
 	}
 
-	friend	vec4 operator*( const vec4& a, const mat4& m )
+	friend	vect4 operator*( const vect4& a, const vect44& m )
 	{
-		vec4 ret;
+		vect4 ret;
 		ret.x = a.x*m.m[0][0] + a.y*m.m[1][0] + a.z*m.m[2][0] + a.w*m.m[3][0] ;
 		ret.y = a.x*m.m[0][1] + a.y*m.m[1][1] + a.z*m.m[2][1] + a.w*m.m[3][1] ;
 		ret.z = a.x*m.m[0][2] + a.y*m.m[1][2] + a.z*m.m[2][2] + a.w*m.m[3][2] ;
@@ -840,9 +840,9 @@ public:
 		return ret;
 	}
 
-	vec4 operator*( const vec4& a ) const
+	vect4 operator*( const vect4& a ) const
 	{
-		vec4 ret;
+		vect4 ret;
 		ret.x = m[0][0]*a.x + m[0][1]*a.y + m[0][2]*a.z + m[0][3]*a.w ;
 		ret.y = m[1][0]*a.x + m[1][1]*a.y + m[1][2]*a.z + m[1][3]*a.w ;
 		ret.z = m[2][0]*a.x + m[2][1]*a.y + m[2][2]*a.z + m[2][3]*a.w ;
@@ -850,12 +850,12 @@ public:
 		return ret;
 	}
 
-	mat4 operator*( const mat4& m ) const
+	vect44 operator*( const vect44& m ) const
 	{
 		const MAT4& a = this->m;
 		const MAT4& b = m.m;
 
-		mat4 ret(
+		vect44 ret(
 			a[0][0] * b[0][0] +  a[0][1] * b[1][0] +  a[0][2] * b[2][0] +  a[0][3] * b[3][0],
 			a[0][0] * b[0][1] +  a[0][1] * b[1][1] +  a[0][2] * b[2][1] +  a[0][3] * b[3][1],
 			a[0][0] * b[0][2] +  a[0][1] * b[1][2] +  a[0][2] * b[2][2] +  a[0][3] * b[3][2],
@@ -881,16 +881,16 @@ public:
 	}
 
 /*
-	mat4& operator=( const mat4& a ) 
+	vect44& operator=( const vect44& a ) 
 	{
 		*this = a;
 		
 		return *this;
 	}
 */
-	mat4& operator*=( const mat4& a ) 
+	vect44& operator*=( const vect44& a ) 
 	{
-//		mat4_multiply( m_array, m_array, a.m_array );
+//		vect44_multiply( m_array, m_array, a.m_array );
 		*this = *this * a;
 		
 		return *this;
@@ -906,7 +906,7 @@ public:
 		m[3][0] = 0.0f;	m[3][1] = 0.0f;	m[3][2] = 0.0f;	m[3][3] = 1.0f;
 	}
 	
-	void SetTranslate( const vec3& pos )
+	void SetTranslate( const vect3& pos )
 	{
 		m[3][0] = pos.x;
 		m[3][1] = pos.y;
@@ -919,47 +919,47 @@ public:
 		m[3][2] = z;
 	}
 /*
-	void Invers( const mat4& m )
+	void Invers( const vect44& m )
 	{
-		mat4_invers( *this, m );
+		vect44_invers( *this, m );
 	}
 */
 /*
-	vec3 GetVecX()
+	vect3 GetVecX()
 	{
-		return vec3( m[0][0], m[0][1], m[0][2] );
+		return vect3( m[0][0], m[0][1], m[0][2] );
 	}
-	vec3 GetVecY()
+	vect3 GetVecY()
 	{
-		return vec3( m[1][0], m[1][1], m[1][2] );
+		return vect3( m[1][0], m[1][1], m[1][2] );
 	}
-	vec3 GetVecZ()
+	vect3 GetVecZ()
 	{
-		return vec3( m[2][0], m[2][1], m[2][2] );
+		return vect3( m[2][0], m[2][1], m[2][2] );
 	}
-	vec3 GetVecT()
+	vect3 GetVecT()
 	{
-		return vec3( m[3][0], m[3][1], m[3][2] );
+		return vect3( m[3][0], m[3][1], m[3][2] );
 	}
-	void setVecX( vec3 v )
+	void setVecX( vect3 v )
 	{
 		m[0][0] = v.x; 
 		m[0][1] = v.y; 
 		m[0][2] = v.z;
 	}
-	void setVecY( vec3 v )
+	void setVecY( vect3 v )
 	{
 		m[1][0] = v.x; 
 		m[1][1] = v.y; 
 		m[1][2] = v.z;
 	}
-	void setVecZ( vec3 v )
+	void setVecZ( vect3 v )
 	{
 		m[2][0] = v.x; 
 		m[2][1] = v.y; 
 		m[2][2] = v.z;
 	}
-	void setVecT( vec3 v )
+	void setVecT( vect3 v )
 	{
 		m[3][0] = v.x; 
 		m[3][1] = v.y; 
@@ -976,7 +976,7 @@ public:
 		float	z2 = zFar;
 		float	z1 = zNear;
 
-		*this =  mat4(
+		*this =  vect44(
 			p / aspect, 0.0,	0.0,        				 0.0,
 			0.0,        p,    	0.0,        				 0.0,
 			0.0,        0.0,  	(z2+z1)         /(z1-z2), 	-1.0,
@@ -985,12 +985,12 @@ public:
 	}
 
 	//-----------------------------------------------------------------------------
-	void lookAt( vec3 pos, vec3 at, vec3 up )
+	void lookAt( vect3 pos, vect3 at, vect3 up )
 	//-----------------------------------------------------------------------------
 	{
-		vec3	z = normalizXe(at-pos);
-		vec3	x = cross( up, z );
-		vec3	y = cross( z, x );
+		vect3	z = normalizXe(at-pos);
+		vect3	x = cross( up, z );
+		vect3	y = cross( z, x );
 	
 		m[0][0] =x.x;	m[0][1] =x.y;	m[0][2] =x.z;	m[0][3] = 0.0f;
 		m[1][0] =y.x;	m[1][1] =y.y;	m[1][2] =y.z;	m[1][3] = 0.0f;
@@ -998,11 +998,11 @@ public:
 		m[3][0] =pos.x;	m[3][1] =pos.y;	m[3][2] =pos.z;	m[3][3] = 1.0f;
 	}
 	//-----------------------------------------------------------------------------
-	void lookFor( vec3 pos, vec3 z, vec3 up )
+	void lookFor( vect3 pos, vect3 z, vect3 up )
 	//-----------------------------------------------------------------------------
 	{
-		vec3	x = cross( up, z );
-		vec3	y = cross( z, x );
+		vect3	x = cross( up, z );
+		vect3	y = cross( z, x );
 	
 		m[0][0] =x.x;	m[0][1] =x.y;	m[0][2] =x.z;	m[0][3] = 0.0f;
 		m[1][0] =y.x;	m[1][1] =y.y;	m[1][2] =y.z;	m[1][3] = 0.0f;
@@ -1010,7 +1010,7 @@ public:
 		m[3][0] =pos.x;	m[3][1] =pos.y;	m[3][2] =pos.z;	m[3][3] = 1.0f;
 	}
 	//-----------------------------------------------------------------------------
-	void rotXYZ( vec3 rot )
+	void rotXYZ( vect3 rot )
 	//-----------------------------------------------------------------------------
 	{
 		this->rotX( rot.x );
@@ -1023,7 +1023,7 @@ public:
 	{
 		float	c = cos(f);
 		float	s = sin(f);
-		*this *= mat4(
+		*this *= vect44(
 			1,  0,  0,  0,
 			0,  c, -s,  0,
 			0,  s,  c,  0,
@@ -1036,7 +1036,7 @@ public:
 	{
 		float	c = cos(f);
 		float	s = sin(f);
-		*this *= mat4(
+		*this *= vect44(
 			c,  0, -s,  0,
 			0,  1,  0,  0,
 			s,  0,  c,  0,
@@ -1049,7 +1049,7 @@ public:
 	{
 		float	c = cos(f);
 		float	s = sin(f);
-		*this *= mat4(
+		*this *= vect44(
 			c, -s,  0,  0,
 			s,	c,  0,  0,
 			0,  0,  1,  0,
@@ -1065,7 +1065,7 @@ public:
 		m[2][3] = z;
 	}
 	//-----------------------------------------------------------------------------
-	void trans( vec3 vec )
+	void translate( vect3 vec )
 	//-----------------------------------------------------------------------------
 	{
 		m[3][0] += vec.x;
@@ -1073,7 +1073,7 @@ public:
 		m[3][2] += vec.z;
 	}
 	//-----------------------------------------------------------------------------
-	void trans( float x, float y, float z )
+	void translate( float x, float y, float z )
 	//-----------------------------------------------------------------------------
 	{
 		m[3][0] += x;
@@ -1090,7 +1090,7 @@ public:
 		m[2][2] *= z;
 	}
 	//-----------------------------------------------------------------------------
-	void scale( vec3 scale )
+	void scale( vect3 scale )
 	//-----------------------------------------------------------------------------
 	{
 		m[0][0] *= scale.x;
@@ -1102,7 +1102,7 @@ public:
 	void print()
 	//-----------------------------------------------------------------------------
 	{
-		printf("mat4:\n");
+		printf("vect44:\n");
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[0][0], m[0][1], m[0][2], m[0][3] );
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[1][0], m[1][1], m[1][2], m[1][3] );
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[2][0], m[2][1], m[2][2], m[2][3] );
@@ -1112,7 +1112,7 @@ public:
 	void print( const char* str )
 	//-----------------------------------------------------------------------------
 	{
-		printf("mat4:%s\n", str);
+		printf("vect44:%s\n", str);
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[0][0], m[0][1], m[0][2], m[0][3] );
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[1][0], m[1][1], m[1][2], m[1][3] );
 		printf("%9.6f %9.6f %9.6f %9.6f\n", m[2][0], m[2][1], m[2][2], m[2][3] );
@@ -1122,55 +1122,55 @@ public:
 };
 
 
-void	mat4_Frustum( mat4& m, float l, float r, float b, float t, float n, float f );
-void	mat4_Ortho( float* m, float l, float r, float b, float t, float n, float f );
+void	vect44_Frustum( vect44& m, float l, float r, float b, float t, float n, float f );
+void	vect44_Ortho( float* m, float l, float r, float b, float t, float n, float f );
 
-int	mat4_print( mat4& m );
-int	mat4_print( float* m );
-void	mat4_frustum( float* m, float l, float r, float b, float t, float n, float f );
-void	mat4_translate( mat4& m, float x, float y, float z );
-void	mat4_translate( float* m, float x, float y, float z );
-void	mat4_translate( float* m, vec3 vec );
-void	mat4_translate( mat4& m, vec3 vec );
-void	mat4_rotateX( mat4& m, float th );
-void	mat4_rotateY( mat4& m, float th );
-void	mat4_rotateZ( mat4& m, float th );
-void	mat4_scaling( mat4& m, float sx, float sy, float sz  );
-void	mat4_scaling( float* m, float sx, float sy, float sz  );
-void	mat4_scaling( float* m, const vec3& vecScale  );
-void	mat4_scaling( mat4& m, const vec3& vecScale  );
-void	mat4_transpose( float* m, float a[16] );
+int	vect44_print( vect44& m );
+int	vect44_print( float* m );
+void	vect44_frustum( float* m, float l, float r, float b, float t, float n, float f );
+void	vect44_translate( vect44& m, float x, float y, float z );
+void	vect44_translate( float* m, float x, float y, float z );
+void	vect44_translate( float* m, vect3 vec );
+void	vect44_translate( vect44& m, vect3 vec );
+void	vect44_rotateX( vect44& m, float th );
+void	vect44_rotateY( vect44& m, float th );
+void	vect44_rotateZ( vect44& m, float th );
+void	vect44_scaling( vect44& m, float sx, float sy, float sz  );
+void	vect44_scaling( float* m, float sx, float sy, float sz  );
+void	vect44_scaling( float* m, const vect3& vecScale  );
+void	vect44_scaling( vect44& m, const vect3& vecScale  );
+void	vect44_transpose( float* m, float a[16] );
 
-void	mat4_copy( float* m, float a[16] );
+void	vect44_copy( float* m, float a[16] );
 
-void 	mat4_invers( mat4& a, const mat4& b );
-//void	mat4_invers( float* out, float* in );
-void	mat4_identity( float* m );
-void	mat4_identity( mat4& m );
+void 	vect44_invers( vect44& a, const vect44& b );
+//void	vect44_invers( float* out, float* in );
+void	vect44_identity( float* m );
+void	vect44_identity( vect44& m );
 
-void	mat4_getTranslate( float* m, float x, float y, float z );
-void	mat4_getRotateX( float* m, float th );
-void	mat4_getRotateY( float* m, float th );
-void	mat4_getRotateZ( float* m, float th );
-void	mat4_getScale( float* m, float sx, float sy, float sz  );
+void	vect44_getTranslate( float* m, float x, float y, float z );
+void	vect44_getRotateX( float* m, float th );
+void	vect44_getRotateY( float* m, float th );
+void	vect44_getRotateZ( float* m, float th );
+void	vect44_getScale( float* m, float sx, float sy, float sz  );
 
-vec4	mul( const vec4& a, const mat4& m );
+vect4	mul( const vect4& a, const vect44& m );
 
-float*	mat4_identity();
+float*	vect44_identity();
 
-void 	mat4_glFrustumf( float* m,  float left, float right, float bottom, float top, float near, float far);
-void 	mat4_perspective( mat4& m, float fovy, float aspect, float zNear, float zFar);
-void 	mat4_perspective(float* m, float fovy, float aspect, float zNear, float zFar);
-void 	mat4_invers( float* m, const float* in );
-void	mat4_add( float* m, float* a, float* b );
-void	mat4_sub( float* m, float* a, float* b );
-void	mat4_div( float* m, float f );
+void 	vect44_glFrustumf( float* m,  float left, float right, float bottom, float top, float near, float far);
+void 	vect44_perspective( vect44& m, float fovy, float aspect, float zNear, float zFar);
+void 	vect44_perspective(float* m, float fovy, float aspect, float zNear, float zFar);
+void 	vect44_invers( float* m, const float* in );
+void	vect44_add( float* m, float* a, float* b );
+void	vect44_sub( float* m, float* a, float* b );
+void	vect44_div( float* m, float f );
 
 // for raytrace
-void mat4_ray_perspective(float* m, float fovy, float aspect );
-void	mat4_otrho( float* m, float l, float r, float b, float t, float n, float f );
+void vect44_ray_perspective(float* m, float fovy, float aspect );
+void	vect44_otrho( float* m, float l, float r, float b, float t, float n, float f );
 
-mat4	mat4_GetTranslate( float x, float y, float z );
-mat4	mat4_GetRotateX( float th );
-mat4	mat4_GetRotateY( float th );
-mat4	mat4_GetRotateZ( float th );
+vect44	vect44_GetTranslate( float x, float y, float z );
+vect44	vect44_GetRotateX( float th );
+vect44	vect44_GetRotateY( float th );
+vect44	vect44_GetRotateZ( float th );

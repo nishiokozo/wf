@@ -13,7 +13,7 @@
 #include <EGL/egl.h>
 #include <math.h>
 #include "bcm_host.h"
-#include "vec.h"
+#include "vect.h"
 
 typedef struct {
   EGLNativeWindowType  nativeWin;
@@ -46,6 +46,7 @@ typedef struct {
     GLfloat x, y, z;
 //    GLfloat u, v;
 } VertexType;
+
 
 
 unsigned short tblIndex[] = {
@@ -191,15 +192,18 @@ int InitShaders(GLuint *program, char const *vShSrc, char const *fShSrc)
 int main ( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
 {
-	GLuint m_hdl_matLocal;	  // シェーダーmatLocalのハンドル
+	GLuint m_hdl_matLocal;	  // シェーダーmatModelのハンドル
 
   unsigned int frames = 0;
   int res;
 
-	mat4	matWorld;
-	mat4	matPers;
-	mat4	matView;
-	mat4	matModel;
+	vect44	matWorld;
+	vect44	matPers;
+	vect44	matView;
+	vect44	matModel;
+
+
+
 	
 
   bcm_host_init();
@@ -207,14 +211,22 @@ int main ( int argc, char *argv[] )
   if (!res) return 0;
   res = SurfaceCreate(&g_sc);
   if (!res) return 0;
-const char vShaderSrc[] =
-  "uniform	mat4	matLocal;	  						\n"
-  "attribute vec3  vecPos;						\n"
+  
+// 行優先、列ｘ行で計算、ここまではOK。
+// M・ｖで転置せずとも正しく計算される・・ここでやっぱりまたアレと思ってしまう。
+// これについては結果がベクトルだから転置行列を使っても結果に影響を及ぼさないということ。
+// 印象から自動で転置しているような思い込みをいつの間にかしてしまいがち。ここも注意。
+
+
+// 
+const char shader[] = // GLSLではマトリクス乗算は列ｘ行で計算されることに注意
+  "uniform mat4		Mat;	  						\n"
+  "attribute vec3	Pos;							\n"
   "void main() 									    \n"
   "{ 						    			        \n"
-  "   gl_Position = matLocal * vec4(vecPos,1)  ;   		\n"
+  "   gl_Position = Mat*vec4(Pos,1)    ;   		\n"
   "}                 								\n";
-  res = InitShaders(&g_program, vShaderSrc, fShaderSrc);
+  res = InitShaders(&g_program, shader, fShaderSrc);
   if (!res) return 0;
 
 //  createBuffer();
@@ -235,8 +247,8 @@ VertexType tblVert[] = {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(tblIndex), tblIndex, GL_STATIC_DRAW);
 }
 
-		m_hdl_matLocal = glGetUniformLocation( g_program, "matLocal" );
-  g_sp.vecPos = glGetAttribLocation(g_program, "vecPos");
+		m_hdl_matLocal = glGetUniformLocation( g_program, "Mat" );
+  g_sp.vecPos = glGetAttribLocation(g_program, "Pos");
 
   glClearColor(0.0f, 0.3f, 0.0f, 0.5f);
 
@@ -267,23 +279,23 @@ VertexType tblVert[] = {
 		float	z2 = zFar;
 		float	z1 = zNear;
 
-		matPers =  mat4(
+		matPers =  vect44(
 			p / a,		 0.0,	0.0,        				 0.0,
 			0.0,        p,    	0.0,        				 0.0,
 			0.0,        0.0,  	(z2+z1)         /(z1-z2), 	-1.0,
 			0.0,    	0.0,	(2.0 * z2 * z1) /(z1-z2),   0.0
 		);
 
-		matPers =  mat4(
+		matPers =  vect44(
 			p / a, 		0.0,	0.0,    0.0,
 			0.0,        p,    	0.0,    0.0,
 			0.0,        0.0,  	1.0,	0.0,
 			0.0,    	0.0,	0.0,	 0.0
 		);
-		matPers =  mat4(
+		matPers =  vect44(
 			1 / a, 		0.0,	0.0,    0.0,
 			0.0,        1,   	0.0,    0.0,
-			0.0,        0.0,  	1.0,	0.0,
+			0.0,        0.0,  	0.0,	0.0,
 			0.0,    	0.0,	0.0,	1.0
 		);
 	}
@@ -294,13 +306,25 @@ VertexType tblVert[] = {
 
 static float rad =0;
 rad += RAD(1);
-			matModel.rotZ(rad);
-			matModel.trans(-0.5,0,0.5);
+//			matModel.rotZ(rad);
+			matModel.translate(-0.2 , 0.2, 0.2);
 
 			
-			mat4 mat = matModel*matPers;
+			vect44 mat = matModel*matPers;
+//			vect44 mat = matModel;
 
 			glUniformMatrix4fv( m_hdl_matLocal         , 1, GL_FALSE, mat.GetArray() );
+
+/*
+const GLfloat modelviewmatrix[] = 
+{
+    1.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    0.5f, 0.5f, 0.0f, 1.0f
+};
+			glUniformMatrix4fv( m_hdl_matLocal         , 1, GL_FALSE, modelviewmatrix );
+*/
 
 //	void Draw ()
 	{

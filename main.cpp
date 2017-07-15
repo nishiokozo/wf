@@ -20,12 +20,6 @@ typedef struct
 } ScreenSettings;
 
 
-const char fShaderSrc[] =
-	"precision mediump float;\n"
-	"void main()				\n"
-	"{									\n"
-	"	gl_FragColor = vec4(1,1, 0.5, 1.0);\n"
-	"}									\n";
 
 //typedef struct {
 //	GLint	 hdlPos;
@@ -38,9 +32,6 @@ typedef struct
 
 
 
-unsigned short tblIndex[] = {
-	0, 1, 2
-};
 
 
 //ShaderParams		g_sp;
@@ -219,12 +210,42 @@ int main ( int argc, char *argv[] )
 
 
 
-	VERT_INF tblPos[] = 
+	VERT_INF tblVert[] = 
 	{
+/*
 	  {.x = -0.433, .y = -0.25, .z = 0.0f},
 	  {.x =  0.433, .y = -0.25, .z = 0.0f},
 	  {.x =  0.0  , .y =  0.5 , .z = 0.0f}
+*/
+	  { -1,-1,-1 },
+	  {  1,-1,-1 },
+	  { -1, 1,-1 },
+	  {  1, 1,-1 },
+	  { -1,-1, 1 },
+	  {  1,-1, 1 },
+	  { -1, 1, 1 },
+	  {  1, 1, 1 },
 	};
+	unsigned short tblIndex[] = 
+	{
+		0,1,
+		1,3,
+		3,2,
+		2,0,
+		
+		4,5,
+		5,7,
+		7,6,
+		6,4,
+		
+		0,4,
+		1,5,
+		3,7,
+		2,6,
+	};
+ 	int	cntVert = 8;
+ 	int	cntIndex = 24;
+ 
  
 	char vshader[] = // GLSLは列ｘ行。なので左からマトリクスをかける
 		"uniform mat4	Mat;					\n"
@@ -235,6 +256,13 @@ int main ( int argc, char *argv[] )
 		"}								 		\n"
 	;
 
+	const char fShaderSrc[] =
+		"precision mediump float;				\n"
+		"void main()							\n"
+		"{										\n"
+		"	gl_FragColor = vec4( 1,1, 1, 1.0);	\n"
+		"}										\n"
+	;
 
 
 
@@ -248,7 +276,7 @@ int main ( int argc, char *argv[] )
 		glGenBuffers(1, &hdlVert);
 		// vertex buffer
 		glBindBuffer(GL_ARRAY_BUFFER, hdlVert);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(tblPos), tblPos, GL_STATIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(tblVert), tblVert, GL_STATIC_DRAW);
 
 		// index buffer
 		glGenBuffers(1, &hdlIndex);
@@ -259,7 +287,7 @@ int main ( int argc, char *argv[] )
 	hdlMat = glGetUniformLocation( hdlProgram, "Mat" );
 	hdlVecPos = glGetAttribLocation(hdlProgram, "Pos");
 
-	glClearColor(0.3f, 0.6f, 0.75f, 0.5f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0);
 
 	/* 600frame / 60fps = 10sec */ 
 	while(1) 
@@ -274,49 +302,19 @@ int main ( int argc, char *argv[] )
 			matView.identity();
 
 			// 射影行列をセット
-//			matPers.setPerspective( 27.5f, 1.33, 0.1f, 100.0f ); 
 
-	//-----------------------------------------------------------------------------
-	{
-		float fovy	=	27.5; 
-		float a=	1920.0f/1080.0f; 
-		float zNear	=	0.1; 
-		float zFar	=	100;
-
-		float p = 1.0f / tanf(fovy *(M_PI/360.0));
-
-		float	z2 = zFar;
-		float	z1 = zNear;
-
-		matPers =	vect44(
-			p / a,		 0.0,	0.0,								 0.0,
-			0.0,				p,			0.0,								 0.0,
-			0.0,				0.0,		(z2+z1)				 /(z1-z2), 	-1.0,
-			0.0,			0.0,	(2.0 * z2 * z1) /(z1-z2),	 0.0
-		);
-
-		matPers =	vect44(
-			p / a, 		0.0,	0.0,		0.0,
-			0.0,				p,			0.0,		0.0,
-			0.0,				0.0,		1.0,	0.0,
-			0.0,			0.0,	0.0,	 0.0
-		);
-		matPers =	vect44(
-			1 / a, 		0.0,	0.0,		0.0,
-			0.0,				1,	 	0.0,		0.0,
-			0.0,				0.0,		0.0,	0.0,
-			0.0,			0.0,	0.0,	1.0
-		);
-	}
+			// 射影行列をセット
+			matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
 
 
 			// モデル行列をセット
 			matModel.identity();
 
-static float rad =0;
-rad += RAD(1);
-			matModel.rotZ(rad);
-			matModel.translate(-0.2 , 0.2, 0.2);
+			static float rad =0;
+			rad += RAD(1);
+			matModel.rotX(rad);
+			matModel.rotY(rad);
+			matModel.translate(-0.2 , 0.2, 5 );
 
 			
 			vect44 mat = matModel*matPers;
@@ -333,11 +331,9 @@ rad += RAD(1);
 		glBindBuffer(GL_ARRAY_BUFFER, hdlVert);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, hdlIndex);
 		glEnableVertexAttribArray(hdlVecPos);
-	//	glEnableVertexAttribArray(g_sp.aTex);
 		glVertexAttribPointer(hdlVecPos, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	//	glVertexAttribPointer(g_sp.aTex, 2, GL_FLOAT, GL_FALSE, 20, (void*)12);
 		glEnableVertexAttribArray(0);
-		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_SHORT, 0);
+		glDrawElements(GL_LINES, cntIndex, GL_UNSIGNED_SHORT, 0);
 	}
 		eglSwapBuffers(g_sc.display, g_sc.surface);
 		frames++;

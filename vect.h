@@ -968,19 +968,29 @@ public:
 */
 
 	//-----------------------------------------------------------------------------
-	void setPerspective( float fovy, float aspect, float zNear, float zFar)
+	void setPerspectiveGL( float fovy, float aspect, float n, float f)
 	//-----------------------------------------------------------------------------
 	{
 		float p = 1.0f / tanf(fovy *(M_PI/360.0));
 
-		float	z2 = zFar;
-		float	z1 = zNear;
+		*this =  vect44(
+			p / aspect	, 0		, 0						,  0,
+			0			, p		, 0						,  0,
+			0			, 0		,(f+n)         /(n-f)	, -1.0,
+			0			, 0		,(2.0 * f * n) /(n-f)	,   0
+		);
+	}
+	//-----------------------------------------------------------------------------
+	void setPerspective( float fovy, float aspect )
+	//-----------------------------------------------------------------------------
+	{
+		float p = 1.0f / tanf(fovy *(M_PI/360.0));
 
 		*this =  vect44(
-			p / aspect, 0.0,	0.0,        				 0.0,
-			0.0,        p,    	0.0,        				 0.0,
-			0.0,        0.0,  	(z2+z1)         /(z1-z2), 	-1.0,
-			0.0,    	0.0,	(2.0 * z2 * z1) /(z1-z2),   0.0
+			p / aspect	,		0	,		0	,	 0,
+			0			,		p	,		0	,	 0,
+			0			,		0	,		0	, 	 2,
+			0			,		0	,		0	,	 0
 		);
 	}
 

@@ -1,4 +1,10 @@
+//#include <iostream>
+//using namespace std;
+#include <memory>
+//#include <iostream>
+#include <new>
 #include <stdio.h>
+#include <memory.h>
 #include <assert.h>
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
@@ -89,7 +95,14 @@ void init_egl(EGL_INF *sc)
 #include	"vect.h"
 
 
-typedef struct
+struct INF_FORM
+{
+	char	name[16];
+	void*	pOfs;
+	int 	size;
+};
+
+struct INF_MODEL_CON
 {
 	GLenum	m_mode;
  	
@@ -100,38 +113,94 @@ typedef struct
 	GLint  	m_hdlPos;
 	GLint  	m_sizePos;
 	GLsizei	m_cntIndex;
-} INF_MODEL;
+
+	INF_MODEL_CON()
+	{
+		m_mode = 0;
+
+		m_hdlVert = 0;
+		m_hdlIndex = 0;
+		m_hdlprogram = 0;
+		m_hdlMat = 0;
+		m_hdlPos = 0;
+		m_sizePos = 0;
+		m_cntIndex = 0;
+		
+	}
+};
+struct INF_MODEL_TEX
+{
+	GLenum	m_mode;
+ 	
+	GLuint  m_hdlVert;
+	GLuint  m_hdlIndex;
+	GLuint  m_hdlprogram;
+	GLuint  m_hdlMat;
+	GLint  	m_hdlPos;
+	GLint  	m_sizePos;
+	GLint  	m_hdlUv;
+	GLint  	m_sizeUv;
+	GLsizei	m_cntIndex;
+	//
+	GLsizei m_stride;
+	GLvoid* m_ptrPos;
+	GLvoid* m_ptrUv;
+	INF_FORM*	m_infForm;
+	int			m_cntForm;
+
+	INF_MODEL_TEX()
+	{
+		m_mode = 0;
+
+		m_hdlVert = 0;
+		m_hdlIndex = 0;
+		m_hdlprogram = 0;
+		m_hdlMat = 0;
+		m_hdlPos = 0;
+		m_sizePos = 0;
+		m_hdlUv = 0;
+		m_sizeUv = 0;
+		m_cntIndex = 0;
+		//
+		m_stride	= 0;
+		m_ptrPos	= 0;
+		m_ptrUv	= 0;
+		m_infForm = 0;
+		m_cntForm = 0;
+	}
+};
+
 
 
 
 //-----------------------------------------------------------------------------
-void	setModelGL( INF_MODEL* pModel, GLfloat* tblVert, GLushort* tblIndex, const GLchar *srcVert, const GLchar *srcFlag, int cntVert, GLsizei cntIndex, GLenum mode )
+void	gl_setModelCon( INF_MODEL_CON& model, GLfloat* tblVert, GLushort* tblIndex, const GLchar *srcVert, const GLchar *srcFlag, GLsizei cntIndex, GLenum mode, int sizeVert )
 //-----------------------------------------------------------------------------
 {
-	pModel->m_mode = mode;;
- 	pModel->m_cntIndex = cntIndex;
+	model.m_mode = mode;;
+ 	model.m_cntIndex = cntIndex;
 
 	{// 頂点バッファ登録
-		glGenBuffers(1, &pModel->m_hdlVert);
-		glBindBuffer(GL_ARRAY_BUFFER, pModel->m_hdlVert);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat[3])*cntVert, tblVert, GL_STATIC_DRAW);
+		glGenBuffers(1, &model.m_hdlVert);
+		glBindBuffer(GL_ARRAY_BUFFER, model.m_hdlVert);
+		glBufferData(GL_ARRAY_BUFFER, sizeVert, tblVert, GL_STATIC_DRAW);
 	}
 
 	{// インデックスバッファ登録
 		// index buffer
-		glGenBuffers(1, &pModel->m_hdlIndex);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pModel->m_hdlIndex);
+		glGenBuffers(1, &model.m_hdlIndex);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.m_hdlIndex);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort)*cntIndex, tblIndex, GL_STATIC_DRAW);
 	}
 
   
 	{// シェーダー登録
-		pModel->m_hdlprogram = glCreateProgram();
+		model.m_hdlprogram = glCreateProgram();
 		{
 			GLuint hdl = glCreateShader(GL_VERTEX_SHADER);
 			glShaderSource(hdl, 1, &srcVert, NULL);
 			glCompileShader(hdl);
-			glAttachShader(pModel->m_hdlprogram, hdl);
+			glAttachShader(model.m_hdlprogram, hdl);
 			glDeleteShader(hdl);
 		}
 
@@ -139,17 +208,118 @@ void	setModelGL( INF_MODEL* pModel, GLfloat* tblVert, GLushort* tblIndex, const 
 			GLuint hdl = glCreateShader(GL_FRAGMENT_SHADER);
 			glShaderSource(hdl, 1, &srcFlag, NULL);
 			glCompileShader(hdl);
-			glAttachShader(pModel->m_hdlprogram, hdl);
+			glAttachShader(model.m_hdlprogram, hdl);
 			glDeleteShader(hdl);
 		}
 
-		glLinkProgram(pModel->m_hdlprogram);
-		pModel->m_hdlMat = glGetUniformLocation( pModel->m_hdlprogram, "Mat" );
-		pModel->m_hdlPos = glGetAttribLocation(pModel->m_hdlprogram, "Pos");
-		pModel->m_sizePos = 3;//3:xyz
+		glLinkProgram(model.m_hdlprogram);
+		model.m_hdlMat = glGetUniformLocation( model.m_hdlprogram, "Mat" );
+		model.m_hdlPos = glGetAttribLocation(model.m_hdlprogram, "Pos");
+		model.m_sizePos = 3;//3:xyz
 
 	}
 }
+//-----------------------------------------------------------------------------
+void	gl_drawModelCon( INF_MODEL_CON& model, vect44& mat )
+//-----------------------------------------------------------------------------
+{
+	glUseProgram( model.m_hdlprogram );
+
+	glUniformMatrix4fv( model.m_hdlMat, 1, GL_FALSE, mat.GetArray() );
+
+	glBindBuffer( GL_ARRAY_BUFFER,  model.m_hdlVert );
+
+	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  model.m_hdlIndex );
+
+	glEnableVertexAttribArray( model.m_hdlPos );
+	glVertexAttribPointer( model.m_hdlPos, model.m_sizePos, GL_FLOAT, GL_FALSE, 0, (void*)0 );
+	glEnableVertexAttribArray(0);
+
+	glDrawElements( model.m_mode, model.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
+}
+
+//-----------------------------------------------------------------------------
+void	gl_setModelTex( INF_MODEL_TEX& model, GLfloat* tblVert, GLushort* tblIndex, const GLchar *srcVert, const GLchar *srcFlag, GLsizei cntIndex, GLenum mode, int sizeVert, INF_FORM infForm[], int cntForm )
+//-----------------------------------------------------------------------------
+{
+	model.m_mode = mode;;
+ 	model.m_cntIndex = cntIndex;
+ 	model.m_infForm = (INF_FORM*)malloc( sizeof(INF_FORM[cntForm]) );
+
+ 	model.m_stride = 0;
+	for ( int i = 0 ; i < cntForm ; i++ )
+	{
+	 	model.m_infForm[i].pOfs	= infForm[i].pOfs;
+	 	model.m_infForm[i].size	= infForm[i].size;
+		strcpy( model.m_infForm[i].name, infForm[i].name );
+	 	model.m_stride += infForm[i].size*sizeof(GLfloat);
+	}
+
+
+
+	{// 頂点バッファ登録
+		glGenBuffers(1, &model.m_hdlVert);
+		glBindBuffer(GL_ARRAY_BUFFER, model.m_hdlVert);
+		glBufferData(GL_ARRAY_BUFFER, sizeVert, tblVert, GL_STATIC_DRAW);
+	}
+
+	{// インデックスバッファ登録
+		// index buffer
+		glGenBuffers(1, &model.m_hdlIndex);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.m_hdlIndex);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort)*cntIndex, tblIndex, GL_STATIC_DRAW);
+	}
+
+  
+	{// シェーダー登録
+		model.m_hdlprogram = glCreateProgram();
+		{
+			GLuint hdl = glCreateShader(GL_VERTEX_SHADER);
+			glShaderSource(hdl, 1, &srcVert, NULL);
+			glCompileShader(hdl);
+			glAttachShader(model.m_hdlprogram, hdl);
+			glDeleteShader(hdl);
+		}
+
+		{
+			GLuint hdl = glCreateShader(GL_FRAGMENT_SHADER);
+			glShaderSource(hdl, 1, &srcFlag, NULL);
+			glCompileShader(hdl);
+			glAttachShader(model.m_hdlprogram, hdl);
+			glDeleteShader(hdl);
+		}
+
+		glLinkProgram(model.m_hdlprogram);
+		model.m_hdlMat	= glGetUniformLocation( model.m_hdlprogram, "Mat" );
+		model.m_hdlPos	= glGetAttribLocation(model.m_hdlprogram, model.m_infForm[0].name );
+		model.m_sizePos	= infForm[0].size;//3:xyz
+		model.m_hdlUv	= glGetAttribLocation(model.m_hdlprogram, model.m_infForm[1].name );
+		model.m_sizeUv	= infForm[1].size;//2:uv
+
+	}
+}
+//-----------------------------------------------------------------------------
+void	gl_drawModelTex( INF_MODEL_TEX& model, vect44& mat )
+//-----------------------------------------------------------------------------
+{
+	glUseProgram( model.m_hdlprogram );
+
+	glUniformMatrix4fv( model.m_hdlMat, 1, GL_FALSE, mat.GetArray() );
+
+	glBindBuffer( GL_ARRAY_BUFFER,  model.m_hdlVert );
+
+	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  model.m_hdlIndex );
+
+	glEnableVertexAttribArray( model.m_hdlPos );
+	glEnableVertexAttribArray( model.m_hdlUv );
+	glVertexAttribPointer( model.m_hdlPos, model.m_sizePos, GL_FLOAT, GL_FALSE, model.m_stride, model.m_infForm[0].pOfs );
+	glVertexAttribPointer( model.m_hdlUv, model.m_sizeUv, GL_FLOAT, GL_FALSE, model.m_stride, model.m_infForm[1].pOfs );
+	glEnableVertexAttribArray(0);
+
+	glDrawElements( model.m_mode, model.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
+}
+
+
 //-----------------------------------------------------------------------------
 int main ( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
@@ -158,7 +328,7 @@ int main ( int argc, char *argv[] )
 	EGL_INF	g_egl;
 	init_egl(&g_egl);
 
-	INF_MODEL model;
+	INF_MODEL_CON wf;
 	{
 		GLfloat tblVert[] = 
 		{
@@ -188,6 +358,8 @@ int main ( int argc, char *argv[] )
 			3,7,
 			2,6,
 		};
+		int cntIndex = sizeof(tblIndex)/sizeof(GLushort);
+
 		const GLchar *srcVert = // GLSLは列ｘ行。なので左からマトリクスをかける
 			"uniform mat4	Mat;							\n"
 			"attribute vec3	Pos;							\n"
@@ -204,17 +376,59 @@ int main ( int argc, char *argv[] )
 			"}												\n"
 		;
 
-		setModelGL( &model, tblVert, tblIndex, srcVert, srcFlag, 8, 24, GL_LINES );
+		gl_setModelCon( wf, tblVert, tblIndex, srcVert, srcFlag, cntIndex, GL_LINES, sizeof(tblVert) );
+	}
+
+	INF_MODEL_TEX tex;
+	{
+		INF_FORM infForm[] = 
+		{
+			{"Pos"	, (void*)(0),	3},		//Pos
+			{"Uv"	, (void*)(12),	2},		//Uv
+		};
+		int cntForm = sizeof(infForm)/sizeof(INF_FORM);
+		
+		GLfloat tblVert[] = 
+		{
+		   -1,-1, 0 ,	-1,-1,
+		    1,-1, 0 ,	 1,-1,
+		   -1, 1, 0 ,	-1, 1,
+		    1, 1, 0 ,	 1, 1,
+		};
+		GLushort tblIndex[] = 
+		{
+			0,1,2,3,
+		};
+		int cntIndex = sizeof(tblIndex)/sizeof(GLushort);
+		
+		const GLchar *srcVert = // GLSLは列ｘ行。なので左からマトリクスをかける
+			"uniform mat4	Mat;							\n"
+			"attribute vec3	Pos;							\n"
+			"attribute vec2	Uv;								\n"
+			"void main() 									\n"
+			"{ 												\n"
+			"	 gl_Position = Mat * vec4(Pos,1);			\n" // 左から掛ける
+			"}								 				\n"
+		;
+		const GLchar *srcFlag =
+			"precision mediump float;						\n"
+			"void main()									\n"
+			"{												\n"
+			"	gl_FragColor = vec4( 1,1, 1, 1.0);			\n"
+			"}												\n"
+		;
+
+		gl_setModelTex( tex, (GLfloat*)tblVert, tblIndex, srcVert, srcFlag, cntIndex, GL_TRIANGLE_STRIP, sizeof(tblVert), infForm, cntForm  );
 	}
 
 
 
-	vect44	matWorld;
 	vect44	matPers;
-	vect44	matView;
 	vect44	matModel;
 
 
+	// GL環境設定
+//	glEnable(GL_CULL_FACE);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0);
 
 	while(1) 
@@ -222,11 +436,7 @@ int main ( int argc, char *argv[] )
 		glViewport(0, 0, g_egl.width, g_egl.height);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// ワールド行列に対して回転をかける
-		matWorld.identity();
 
-		// カメラ( ビュー行列 )を設定
-		matView.identity();
 
 		// 射影行列をセット
 		matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
@@ -236,27 +446,21 @@ int main ( int argc, char *argv[] )
 
 		static float rad =0;
 		rad += RAD(1);
-		matModel.rotX(rad);
+		matModel.rotX(rad/3);
 		matModel.rotY(rad);
 		matModel.translate(-0.2 , 0.2, 5 );
 
-		vect44 mat = matModel*matPers;
+		vect44 mat_wf = matModel*matPers;
 
-		{
-			glUniformMatrix4fv( model.m_hdlMat, 1, GL_FALSE, mat.GetArray() );
+		gl_drawModelCon( wf, mat_wf );
 
-			glBindBuffer( GL_ARRAY_BUFFER,  model.m_hdlVert );
+		vect44 m;
+		m.translate(2,1,9);
+		vect44 mat_tex = m*matPers;
 
-			glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  model.m_hdlIndex );
+		gl_drawModelTex( tex, mat_tex );
 
-			glEnableVertexAttribArray( model.m_hdlPos );
-			glVertexAttribPointer( model.m_hdlPos, model.m_sizePos, GL_FLOAT, GL_FALSE, 0, (void*)0 );
-			glEnableVertexAttribArray(0);
 
-			glUseProgram( model.m_hdlprogram);
-
-			glDrawElements( model.m_mode, model.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
-		}
 
 		//---
 		eglSwapBuffers(g_egl.display, g_egl.surface);

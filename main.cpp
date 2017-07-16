@@ -23,7 +23,7 @@ void init_egl(EGL_INF *sc)
 //-----------------------------------------------------------------------------
 {
 	bcm_host_init();
-	{
+	{//ラズパイ描画コンテキストの初期化
 		uint32_t success = 0;
 		uint32_t width;
 		uint32_t height;
@@ -36,52 +36,50 @@ void init_egl(EGL_INF *sc)
 		VC_DISPMANX_ALPHA_T alpha = {DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS, 255, 0};
 
 		assert(!(0 > graphics_get_display_size(0, &width, &height)));
+		sc->width = width;
+		sc->height = height;
+
+		vc_dispmanx_rect_set(&dst_rect, 0, 0, sc->width, sc->height);
+		vc_dispmanx_rect_set(&src_rect, 0, 0, sc->width << 16, sc->height << 16);
+
+		dispman_display = vc_dispmanx_display_open(0);
+		dispman_update = vc_dispmanx_update_start(0);
+		dispman_element = vc_dispmanx_element_add(dispman_update, dispman_display,
+							 0, &dst_rect, 0, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 0, DISPMANX_NO_ROTATE);
+		vc_dispmanx_update_submit_sync(dispman_update);
+		nativewindow.element = dispman_element;
+		nativewindow.width = width;
+		nativewindow.height = height;
+		sc->nativeWin = &nativewindow;
+	}
+	{//EGLの初期化
+		EGLint attrib[] = 
 		{
-			sc->width = width;
-			sc->height = height;
+			EGL_RED_SIZE,		8,
+			EGL_GREEN_SIZE,		8,
+			EGL_BLUE_SIZE,		8,
+			EGL_ALPHA_SIZE,		8,
+			EGL_DEPTH_SIZE,		16,
+			EGL_NONE
+		};
+		EGLint context[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+		EGLint numConfigs;
+		EGLConfig config;
 
-			vc_dispmanx_rect_set(&dst_rect, 0, 0, sc->width, sc->height);
-			vc_dispmanx_rect_set(&src_rect, 0, 0, sc->width << 16, sc->height << 16);
+		sc->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+		assert(!(sc->display == EGL_NO_DISPLAY));
 
-			dispman_display = vc_dispmanx_display_open(0);
-			dispman_update = vc_dispmanx_update_start(0);
-			dispman_element = vc_dispmanx_element_add(dispman_update, dispman_display,
-								 0, &dst_rect, 0, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 0, DISPMANX_NO_ROTATE);
-			vc_dispmanx_update_submit_sync(dispman_update);
-			nativewindow.element = dispman_element;
-			nativewindow.width = width;
-			nativewindow.height = height;
-			sc->nativeWin = &nativewindow;
-		}
-		{
-			EGLint attrib[] = 
-			{
-				EGL_RED_SIZE,		8,
-				EGL_GREEN_SIZE,		8,
-				EGL_BLUE_SIZE,		8,
-				EGL_ALPHA_SIZE,		8,
-				EGL_DEPTH_SIZE,		16,
-				EGL_NONE
-			};
-			EGLint context[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
-			EGLint numConfigs;
-			EGLConfig config;
+		assert(eglInitialize(sc->display, &sc->majorVersion, &sc->minorVersion));
 
-			sc->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-			assert(!(sc->display == EGL_NO_DISPLAY));
+		assert(eglChooseConfig(sc->display, attrib, &config, 1, &numConfigs));
 
-			assert(eglInitialize(sc->display, &sc->majorVersion, &sc->minorVersion));
+		sc->surface = eglCreateWindowSurface(sc->display, config, sc->nativeWin, NULL);
+		assert(!(sc->surface == EGL_NO_SURFACE));
 
-			assert(eglChooseConfig(sc->display, attrib, &config, 1, &numConfigs));
+		sc->context = eglCreateContext(sc->display, config, EGL_NO_CONTEXT, context);
+		assert(!(sc->context == EGL_NO_CONTEXT));
 
-			sc->surface = eglCreateWindowSurface(sc->display, config, sc->nativeWin, NULL);
-			assert(!(sc->surface == EGL_NO_SURFACE));
-
-			sc->context = eglCreateContext(sc->display, config, EGL_NO_CONTEXT, context);
-			assert(!(sc->context == EGL_NO_CONTEXT));
-
-			assert(eglMakeCurrent(sc->display, sc->surface, sc->surface, sc->context));
-		}
+		assert(eglMakeCurrent(sc->display, sc->surface, sc->surface, sc->context));
 	}
 	printf("%dx%d \n", sc->width, sc->height);
 
@@ -90,13 +88,68 @@ void init_egl(EGL_INF *sc)
 
 #include	"vect.h"
 
-GLuint g_hdlVert;
-GLuint g_hdlIndex;
-GLuint g_hdlprogram;
-GLuint g_hdlMat;
-GLint g_hdlVecPos;
+
+typedef struct
+{
+	GLenum	m_mode;
+ 	
+	GLuint  m_hdlVert;
+	GLuint  m_hdlIndex;
+	GLuint  m_hdlprogram;
+	GLuint  m_hdlMat;
+	GLint  	m_hdlPos;
+	GLint  	m_sizePos;
+	GLsizei	m_cntIndex;
+} INF_MODEL;
 
 
+
+//-----------------------------------------------------------------------------
+void	setModelGL( INF_MODEL* pModel, GLfloat* tblVert, GLushort* tblIndex, const GLchar *srcVert, const GLchar *srcFlag, int cntVert, GLsizei cntIndex, GLenum mode )
+//-----------------------------------------------------------------------------
+{
+	pModel->m_mode = mode;;
+ 	pModel->m_cntIndex = cntIndex;
+
+	{// 頂点バッファ登録
+		glGenBuffers(1, &pModel->m_hdlVert);
+		glBindBuffer(GL_ARRAY_BUFFER, pModel->m_hdlVert);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat[3])*cntVert, tblVert, GL_STATIC_DRAW);
+	}
+
+	{// インデックスバッファ登録
+		// index buffer
+		glGenBuffers(1, &pModel->m_hdlIndex);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pModel->m_hdlIndex);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort)*cntIndex, tblIndex, GL_STATIC_DRAW);
+	}
+
+  
+	{// シェーダー登録
+		pModel->m_hdlprogram = glCreateProgram();
+		{
+			GLuint hdl = glCreateShader(GL_VERTEX_SHADER);
+			glShaderSource(hdl, 1, &srcVert, NULL);
+			glCompileShader(hdl);
+			glAttachShader(pModel->m_hdlprogram, hdl);
+			glDeleteShader(hdl);
+		}
+
+		{
+			GLuint hdl = glCreateShader(GL_FRAGMENT_SHADER);
+			glShaderSource(hdl, 1, &srcFlag, NULL);
+			glCompileShader(hdl);
+			glAttachShader(pModel->m_hdlprogram, hdl);
+			glDeleteShader(hdl);
+		}
+
+		glLinkProgram(pModel->m_hdlprogram);
+		pModel->m_hdlMat = glGetUniformLocation( pModel->m_hdlprogram, "Mat" );
+		pModel->m_hdlPos = glGetAttribLocation(pModel->m_hdlprogram, "Pos");
+		pModel->m_sizePos = 3;//3:xyz
+
+	}
+}
 //-----------------------------------------------------------------------------
 int main ( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
@@ -105,8 +158,8 @@ int main ( int argc, char *argv[] )
 	EGL_INF	g_egl;
 	init_egl(&g_egl);
 
-
-	{// 頂点バッファ登録
+	INF_MODEL model;
+	{
 		GLfloat tblVert[] = 
 		{
 		   -1,-1,-1 ,
@@ -118,13 +171,7 @@ int main ( int argc, char *argv[] )
 		   -1, 1, 1 ,
 		    1, 1, 1 ,
 		};
-		glGenBuffers(1, &g_hdlVert);
-		glBindBuffer(GL_ARRAY_BUFFER, g_hdlVert);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(tblVert), tblVert, GL_STATIC_DRAW);
-	}
-
-	{// インデックスバッファ登録
-		unsigned short tblIndex[] = 
+		GLushort tblIndex[] = 
 		{
 			0,1,
 			1,3,
@@ -141,53 +188,23 @@ int main ( int argc, char *argv[] )
 			3,7,
 			2,6,
 		};
-		// index buffer
-		glGenBuffers(1, &g_hdlIndex);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_hdlIndex);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(tblIndex), tblIndex, GL_STATIC_DRAW);
-	}
+		const GLchar *srcVert = // GLSLは列ｘ行。なので左からマトリクスをかける
+			"uniform mat4	Mat;							\n"
+			"attribute vec3	Pos;							\n"
+			"void main() 									\n"
+			"{ 												\n"
+			"	 gl_Position = Mat * vec4(Pos,1);			\n" // 左から掛ける
+			"}								 				\n"
+		;
+		const GLchar *srcFlag =
+			"precision mediump float;						\n"
+			"void main()									\n"
+			"{												\n"
+			"	gl_FragColor = vec4( 1,1, 1, 1.0);			\n"
+			"}												\n"
+		;
 
- 	int	cntVert = 8;
- 	int	cntIndex = 24;
- 
- 
-	{// シェーダー登録
-		g_hdlprogram = glCreateProgram();
-		{
-			const GLchar *src = // GLSLは列ｘ行。なので左からマトリクスをかける
-				"uniform mat4	Mat;					\n"
-				"attribute vec3	Pos;					\n"
-				"void main() 							\n"
-				"{ 										\n"
-				"	 gl_Position = Mat * vec4(Pos,1);	\n" // 左から掛ける
-				"}								 		\n"
-			;
-			GLuint hdl = glCreateShader(GL_VERTEX_SHADER);
-			glShaderSource(hdl, 1, &src, NULL);
-			glCompileShader(hdl);
-			glAttachShader(g_hdlprogram, hdl);
-			glDeleteShader(hdl);
-		}
-
-		{
-			const GLchar *src =
-				"precision mediump float;				\n"
-				"void main()							\n"
-				"{										\n"
-				"	gl_FragColor = vec4( 1,1, 1, 1.0);	\n"
-				"}										\n"
-			;
-			GLuint hdl = glCreateShader(GL_FRAGMENT_SHADER);
-			glShaderSource(hdl, 1, &src, NULL);
-			glCompileShader(hdl);
-			glAttachShader(g_hdlprogram, hdl);
-			glDeleteShader(hdl);
-		}
-
-		glLinkProgram(g_hdlprogram);
-		g_hdlMat = glGetUniformLocation( g_hdlprogram, "Mat" );
-		g_hdlVecPos = glGetAttribLocation(g_hdlprogram, "Pos");
-
+		setModelGL( &model, tblVert, tblIndex, srcVert, srcFlag, 8, 24, GL_LINES );
 	}
 
 
@@ -214,7 +231,6 @@ int main ( int argc, char *argv[] )
 		// 射影行列をセット
 		matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
 
-
 		// モデル行列をセット
 		matModel.identity();
 
@@ -226,15 +242,20 @@ int main ( int argc, char *argv[] )
 
 		vect44 mat = matModel*matPers;
 
-		glUniformMatrix4fv( g_hdlMat				 , 1, GL_FALSE, mat.GetArray() );
 		{
-			glUseProgram(g_hdlprogram);
-			glBindBuffer(GL_ARRAY_BUFFER, g_hdlVert);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_hdlIndex);
-			glEnableVertexAttribArray(g_hdlVecPos);
-			glVertexAttribPointer(g_hdlVecPos, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+			glUniformMatrix4fv( model.m_hdlMat, 1, GL_FALSE, mat.GetArray() );
+
+			glBindBuffer( GL_ARRAY_BUFFER,  model.m_hdlVert );
+
+			glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  model.m_hdlIndex );
+
+			glEnableVertexAttribArray( model.m_hdlPos );
+			glVertexAttribPointer( model.m_hdlPos, model.m_sizePos, GL_FLOAT, GL_FALSE, 0, (void*)0 );
 			glEnableVertexAttribArray(0);
-			glDrawElements(GL_LINES, cntIndex, GL_UNSIGNED_SHORT, 0);
+
+			glUseProgram( model.m_hdlprogram);
+
+			glDrawElements( model.m_mode, model.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
 		}
 
 		//---

@@ -1,10 +1,10 @@
 #include <stdio.h>
+#include <assert.h>
 #include <GLES2/gl2.h>
 #include <EGL/egl.h>
 #include <math.h>
-#include "bcm_host.h"
-#include "vect.h"
-#include "EGL/eglext.h"
+#include <bcm_host.h>
+#include <EGL/eglext.h>
 
 
 typedef struct 
@@ -13,172 +13,184 @@ typedef struct
 	EGLDisplay	display;
 	EGLContext	context;
 	EGLSurface	surface;
-	EGLint			majorVersion;
-	EGLint			minorVersion;
-	int				 width;
-	int				 height;
-} ScreenSettings;
-
-
-
-//typedef struct {
-//	GLint	 hdlPos;
-//} ShaderParams;
-
-typedef struct 
+	EGLint		majorVersion;
+	EGLint		minorVersion;
+	int			width;
+	int			height;
+} EGL_INF;
+//-----------------------------------------------------------------------------
+void init_egl(EGL_INF *sc)
+//-----------------------------------------------------------------------------
 {
-		GLfloat x, y, z;
-} VERT_INF;
+	bcm_host_init();
+	{
+		uint32_t success = 0;
+		uint32_t width;
+		uint32_t height;
+		VC_RECT_T dst_rect;
+		VC_RECT_T src_rect;
+		DISPMANX_ELEMENT_HANDLE_T dispman_element;
+		DISPMANX_DISPLAY_HANDLE_T dispman_display;
+		DISPMANX_UPDATE_HANDLE_T dispman_update;
+		static EGL_DISPMANX_WINDOW_T nativewindow;
+		VC_DISPMANX_ALPHA_T alpha = {DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS, 255, 0};
 
+		assert(!(0 > graphics_get_display_size(0, &width, &height)));
+		{
+			sc->width = width;
+			sc->height = height;
 
+			vc_dispmanx_rect_set(&dst_rect, 0, 0, sc->width, sc->height);
+			vc_dispmanx_rect_set(&src_rect, 0, 0, sc->width << 16, sc->height << 16);
 
-
-
-//ShaderParams		g_sp;
-ScreenSettings	g_sc;
-
-GLuint hdlVert;
-GLuint hdlIndex;
-GLuint hdlProgram;
-
-
-EGLBoolean WinCreate(ScreenSettings *sc)
-{
-	uint32_t success = 0;
-	uint32_t width;
-	uint32_t height;
-	VC_RECT_T dst_rect;
-	VC_RECT_T src_rect;
-	DISPMANX_ELEMENT_HANDLE_T dispman_element;
-	DISPMANX_DISPLAY_HANDLE_T dispman_display;
-	DISPMANX_UPDATE_HANDLE_T dispman_update;
-	static EGL_DISPMANX_WINDOW_T nativewindow;
-	VC_DISPMANX_ALPHA_T alpha = {DISPMANX_FLAGS_ALPHA_FIXED_ALL_PIXELS, 255, 0};
-
-	success = graphics_get_display_size(0, &width, &height);
-	if (success < 0) return EGL_FALSE;
-
-	sc->width = width;
-	sc->height = height;
-
-	vc_dispmanx_rect_set(&dst_rect, 0, 0, sc->width, sc->height);
-	vc_dispmanx_rect_set(&src_rect, 0, 0, sc->width << 16, sc->height << 16);
-
-	dispman_display = vc_dispmanx_display_open(0);
-	dispman_update = vc_dispmanx_update_start(0);
-	dispman_element = vc_dispmanx_element_add(dispman_update, dispman_display,
-						 0, &dst_rect, 0, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 0, DISPMANX_NO_ROTATE);
-	vc_dispmanx_update_submit_sync(dispman_update);
-	nativewindow.element = dispman_element;
-	nativewindow.width = width;
-	nativewindow.height = height;
-	sc->nativeWin = &nativewindow;
-	return EGL_TRUE;
-}
-
-EGLBoolean SurfaceCreate(ScreenSettings *sc)
-{
-	EGLint attrib[] = {
-		EGL_RED_SIZE,			 8,
-		EGL_GREEN_SIZE,		 8,
-		EGL_BLUE_SIZE,			8,
-		EGL_ALPHA_SIZE,		 8,
-		EGL_DEPTH_SIZE,		 24,
-		EGL_NONE
-	};
-	EGLint context[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
-	EGLint numConfigs;
-	EGLConfig config;
-
-	sc->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-	if (sc->display == EGL_NO_DISPLAY) return EGL_FALSE;
-	if (!eglInitialize(sc->display, &sc->majorVersion, &sc->minorVersion))
-		return EGL_FALSE;
-	if (!eglChooseConfig(sc->display, attrib, &config, 1, &numConfigs))
-		return EGL_FALSE;
-	sc->surface = eglCreateWindowSurface(sc->display, config, sc->nativeWin, NULL);
-	if (sc->surface == EGL_NO_SURFACE) return EGL_FALSE;
-	sc->context = eglCreateContext(sc->display, config, EGL_NO_CONTEXT, context);
-	if (sc->context == EGL_NO_CONTEXT) return EGL_FALSE;
-	if (!eglMakeCurrent(sc->display, sc->surface, sc->surface, sc->context))
-			return EGL_FALSE;
-	return EGL_TRUE;
-}
-
-GLuint LoadShader(GLenum type, const char *shaderSource)
-{
-	GLuint vshader;
-	GLint compiled;
-
-	vshader = glCreateShader(type);
-	if (vshader == 0) return 0;
-
-	glShaderSource(vshader, 1, &shaderSource, NULL);
-	glCompileShader(vshader);
-
-	glGetShaderiv(vshader, GL_COMPILE_STATUS, &compiled);
-	if (!compiled) { // compile error
-		GLint infoLen = 0;
-		glGetShaderiv(vshader, GL_INFO_LOG_LENGTH, &infoLen);
-		if (infoLen > 0) {
-			char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-			glGetShaderInfoLog(vshader, infoLen, NULL, infoLog);
-			printf("Error compiling vshader:\n%s\n", infoLog);
-			free(infoLog);
+			dispman_display = vc_dispmanx_display_open(0);
+			dispman_update = vc_dispmanx_update_start(0);
+			dispman_element = vc_dispmanx_element_add(dispman_update, dispman_display,
+								 0, &dst_rect, 0, &src_rect, DISPMANX_PROTECTION_NONE, &alpha, 0, DISPMANX_NO_ROTATE);
+			vc_dispmanx_update_submit_sync(dispman_update);
+			nativewindow.element = dispman_element;
+			nativewindow.width = width;
+			nativewindow.height = height;
+			sc->nativeWin = &nativewindow;
 		}
-		glDeleteShader(vshader);
-		return 0;
-	}
-	return vshader;
-}
+		{
+			EGLint attrib[] = 
+			{
+				EGL_RED_SIZE,		8,
+				EGL_GREEN_SIZE,		8,
+				EGL_BLUE_SIZE,		8,
+				EGL_ALPHA_SIZE,		8,
+				EGL_DEPTH_SIZE,		16,
+				EGL_NONE
+			};
+			EGLint context[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+			EGLint numConfigs;
+			EGLConfig config;
 
-int InitShaders(GLuint *program, char const *vShSrc, char const *fShSrc)
-{
-	GLuint vShader;
-	GLuint fShader;
-	GLint	linked;
-	GLuint prog;
+			sc->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+			assert(!(sc->display == EGL_NO_DISPLAY));
 
-	vShader = LoadShader(GL_VERTEX_SHADER, vShSrc);
-	fShader = LoadShader(GL_FRAGMENT_SHADER, fShSrc);
+			assert(eglInitialize(sc->display, &sc->majorVersion, &sc->minorVersion));
 
-	prog = glCreateProgram();
-	if (prog == 0) return 0;
+			assert(eglChooseConfig(sc->display, attrib, &config, 1, &numConfigs));
 
-	glAttachShader(prog, vShader);
-	glAttachShader(prog, fShader);
-	glLinkProgram(prog);
-	glGetProgramiv (prog, GL_LINK_STATUS, &linked);
-	if (!linked) { // error
-		GLint infoLen = 0;
-		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &infoLen);
-		if (infoLen > 0) {
-			char* infoLog = (char*)malloc(sizeof(char) * infoLen);
-			glGetProgramInfoLog(prog, infoLen, NULL, infoLog);
-			printf("Error linking program:\n%s\n", infoLog);
-			free ( infoLog );
+			sc->surface = eglCreateWindowSurface(sc->display, config, sc->nativeWin, NULL);
+			assert(!(sc->surface == EGL_NO_SURFACE));
+
+			sc->context = eglCreateContext(sc->display, config, EGL_NO_CONTEXT, context);
+			assert(!(sc->context == EGL_NO_CONTEXT));
+
+			assert(eglMakeCurrent(sc->display, sc->surface, sc->surface, sc->context));
 		}
-		glDeleteProgram (prog);
-		return GL_FALSE;
 	}
-	glDeleteShader(vShader);
-	glDeleteShader(fShader);
+	printf("%dx%d \n", sc->width, sc->height);
 
-	*program = prog;
-	return GL_TRUE;
 }
+//---
 
+#include	"vect.h"
+
+GLuint g_hdlVert;
+GLuint g_hdlIndex;
+GLuint g_hdlprogram;
+GLuint g_hdlMat;
+GLint g_hdlVecPos;
 
 
 //-----------------------------------------------------------------------------
 int main ( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
 {
-	GLuint hdlMat;
-	GLint hdlVecPos;
+	// EGL 初期化	
+	EGL_INF	g_egl;
+	init_egl(&g_egl);
 
-	unsigned int frames = 0;
-	int res;
+
+	{// 頂点バッファ登録
+		GLfloat tblVert[] = 
+		{
+		   -1,-1,-1 ,
+		    1,-1,-1 ,
+		   -1, 1,-1 ,
+		    1, 1,-1 ,
+		   -1,-1, 1 ,
+		    1,-1, 1 ,
+		   -1, 1, 1 ,
+		    1, 1, 1 ,
+		};
+		glGenBuffers(1, &g_hdlVert);
+		glBindBuffer(GL_ARRAY_BUFFER, g_hdlVert);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(tblVert), tblVert, GL_STATIC_DRAW);
+	}
+
+	{// インデックスバッファ登録
+		unsigned short tblIndex[] = 
+		{
+			0,1,
+			1,3,
+			3,2,
+			2,0,
+			
+			4,5,
+			5,7,
+			7,6,
+			6,4,
+			
+			0,4,
+			1,5,
+			3,7,
+			2,6,
+		};
+		// index buffer
+		glGenBuffers(1, &g_hdlIndex);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_hdlIndex);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(tblIndex), tblIndex, GL_STATIC_DRAW);
+	}
+
+ 	int	cntVert = 8;
+ 	int	cntIndex = 24;
+ 
+ 
+	{// シェーダー登録
+		g_hdlprogram = glCreateProgram();
+		{
+			const GLchar *src = // GLSLは列ｘ行。なので左からマトリクスをかける
+				"uniform mat4	Mat;					\n"
+				"attribute vec3	Pos;					\n"
+				"void main() 							\n"
+				"{ 										\n"
+				"	 gl_Position = Mat * vec4(Pos,1);	\n" // 左から掛ける
+				"}								 		\n"
+			;
+			GLuint hdl = glCreateShader(GL_VERTEX_SHADER);
+			glShaderSource(hdl, 1, &src, NULL);
+			glCompileShader(hdl);
+			glAttachShader(g_hdlprogram, hdl);
+			glDeleteShader(hdl);
+		}
+
+		{
+			const GLchar *src =
+				"precision mediump float;				\n"
+				"void main()							\n"
+				"{										\n"
+				"	gl_FragColor = vec4( 1,1, 1, 1.0);	\n"
+				"}										\n"
+			;
+			GLuint hdl = glCreateShader(GL_FRAGMENT_SHADER);
+			glShaderSource(hdl, 1, &src, NULL);
+			glCompileShader(hdl);
+			glAttachShader(g_hdlprogram, hdl);
+			glDeleteShader(hdl);
+		}
+
+		glLinkProgram(g_hdlprogram);
+		g_hdlMat = glGetUniformLocation( g_hdlprogram, "Mat" );
+		g_hdlVecPos = glGetAttribLocation(g_hdlprogram, "Pos");
+
+	}
+
+
 
 	vect44	matWorld;
 	vect44	matPers;
@@ -186,157 +198,47 @@ int main ( int argc, char *argv[] )
 	vect44	matModel;
 
 
-
-	
-
-	bcm_host_init();
-
-	res = WinCreate(&g_sc);
-	if (!res) return 0;
-	res = SurfaceCreate(&g_sc);
-	if (!res) return 0;
-	
-// 行優先、列ｘ行で計算、ここまではOK。
-// M・ｖで転置せずとも正しく計算される・・ここでやっぱりまたアレと思ってしまう。
-// これについては結果がベクトルだから転置行列を使っても結果に影響を及ぼさないということ。
-// 印象から自動で転置しているような思い込みをいつの間にかしてしまいがち。ここも注意。
-
-
-// 
-	// GLSLではマトリクス乗算は列ｘ行で計算されることに注意
-
-
-
-
-
-
-	VERT_INF tblVert[] = 
-	{
-/*
-	  {.x = -0.433, .y = -0.25, .z = 0.0f},
-	  {.x =  0.433, .y = -0.25, .z = 0.0f},
-	  {.x =  0.0  , .y =  0.5 , .z = 0.0f}
-*/
-	  { -1,-1,-1 },
-	  {  1,-1,-1 },
-	  { -1, 1,-1 },
-	  {  1, 1,-1 },
-	  { -1,-1, 1 },
-	  {  1,-1, 1 },
-	  { -1, 1, 1 },
-	  {  1, 1, 1 },
-	};
-	unsigned short tblIndex[] = 
-	{
-		0,1,
-		1,3,
-		3,2,
-		2,0,
-		
-		4,5,
-		5,7,
-		7,6,
-		6,4,
-		
-		0,4,
-		1,5,
-		3,7,
-		2,6,
-	};
- 	int	cntVert = 8;
- 	int	cntIndex = 24;
- 
- 
-	char vshader[] = // GLSLは列ｘ行。なので左からマトリクスをかける
-		"uniform mat4	Mat;					\n"
-		"attribute vec3	Pos;					\n"
-		"void main() 							\n"
-		"{ 										\n"
-		"	 gl_Position = Mat * vec4(Pos,1);	\n" // 左から掛ける
-		"}								 		\n"
-	;
-
-	const char fShaderSrc[] =
-		"precision mediump float;				\n"
-		"void main()							\n"
-		"{										\n"
-		"	gl_FragColor = vec4( 1,1, 1, 1.0);	\n"
-		"}										\n"
-	;
-
-
-
-
-	res = InitShaders(&hdlProgram, vshader, fShaderSrc);
-	if (!res) return 0;
-
-
-	//	createBuffer();
-	{
-		glGenBuffers(1, &hdlVert);
-		// vertex buffer
-		glBindBuffer(GL_ARRAY_BUFFER, hdlVert);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(tblVert), tblVert, GL_STATIC_DRAW);
-
-		// index buffer
-		glGenBuffers(1, &hdlIndex);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, hdlIndex);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(tblIndex), tblIndex, GL_STATIC_DRAW);
-	}
-
-	hdlMat = glGetUniformLocation( hdlProgram, "Mat" );
-	hdlVecPos = glGetAttribLocation(hdlProgram, "Pos");
-
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0);
 
-	/* 600frame / 60fps = 10sec */ 
 	while(1) 
 	{
-		glViewport(0, 0, g_sc.width, g_sc.height);
+		glViewport(0, 0, g_egl.width, g_egl.height);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-			// ワールド行列に対して回転をかける
-			matWorld.identity();
+		// ワールド行列に対して回転をかける
+		matWorld.identity();
 
-			// カメラ( ビュー行列 )を設定
-			matView.identity();
+		// カメラ( ビュー行列 )を設定
+		matView.identity();
 
-			// 射影行列をセット
-
-			// 射影行列をセット
-			matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
+		// 射影行列をセット
+		matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
 
 
-			// モデル行列をセット
-			matModel.identity();
+		// モデル行列をセット
+		matModel.identity();
 
-			static float rad =0;
-			rad += RAD(1);
-			matModel.rotX(rad);
-			matModel.rotY(rad);
-			matModel.translate(-0.2 , 0.2, 5 );
+		static float rad =0;
+		rad += RAD(1);
+		matModel.rotX(rad);
+		matModel.rotY(rad);
+		matModel.translate(-0.2 , 0.2, 5 );
 
-			
-			vect44 mat = matModel*matPers;
-//			vect44 mat = matModel;
+		vect44 mat = matModel*matPers;
 
-			glUniformMatrix4fv( hdlMat				 , 1, GL_FALSE, mat.GetArray() );
+		glUniformMatrix4fv( g_hdlMat				 , 1, GL_FALSE, mat.GetArray() );
+		{
+			glUseProgram(g_hdlprogram);
+			glBindBuffer(GL_ARRAY_BUFFER, g_hdlVert);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_hdlIndex);
+			glEnableVertexAttribArray(g_hdlVecPos);
+			glVertexAttribPointer(g_hdlVecPos, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+			glEnableVertexAttribArray(0);
+			glDrawElements(GL_LINES, cntIndex, GL_UNSIGNED_SHORT, 0);
+		}
 
-
-
-
-//	void Draw ()
-	{
-		glUseProgram(hdlProgram);
-		glBindBuffer(GL_ARRAY_BUFFER, hdlVert);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, hdlIndex);
-		glEnableVertexAttribArray(hdlVecPos);
-		glVertexAttribPointer(hdlVecPos, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-		glEnableVertexAttribArray(0);
-		glDrawElements(GL_LINES, cntIndex, GL_UNSIGNED_SHORT, 0);
-	}
-		eglSwapBuffers(g_sc.display, g_sc.surface);
-		frames++;
+		//---
+		eglSwapBuffers(g_egl.display, g_egl.surface);
 	}
 	return 0;
 }

@@ -137,6 +137,8 @@ public:
 	int		m_w;
 	int		m_h;
 
+	GLint		m_viewport[4];
+
 //-----------------------------------------------------------------------------
 INF_FBO( int width, int height )
 //-----------------------------------------------------------------------------
@@ -224,6 +226,7 @@ void	begin()
 //-----------------------------------------------------------------------------
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, m_hdlFbo );
+	glGetIntegerv( GL_VIEWPORT, m_viewport );
 	glViewport(0, 0, m_w, m_h);
 }
 //-----------------------------------------------------------------------------
@@ -231,6 +234,7 @@ void	end()
 //-----------------------------------------------------------------------------
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, 0 );
+	glViewport(m_viewport[0], m_viewport[1], m_viewport[2], m_viewport[3]);
 }
 
 };
@@ -656,9 +660,8 @@ int main( int argc, char *argv[] )
 	// EGL èâä˙âª	
 	init_egl(g_egl);
 
-#define	SIZE 512
 
-	INF_FBO	fbo( SIZE, SIZE );
+	INF_FBO	fbo( 1280/2, 720/2 );
 	
 
 	INF_MODEL model_wf;
@@ -824,6 +827,11 @@ int main( int argc, char *argv[] )
 
 	while(1) 
 	{
+		glClearColor(0.65f, 0.25f, 0.35f, 0.5f);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, g_egl.width, g_egl.height);
+
+
 		fbo.begin();
 
 			glClearColor(0.15f, 0.25f, 0.35f,1.0f);
@@ -846,12 +854,10 @@ int main( int argc, char *argv[] )
 
 		fbo.end();
 
-		glClearColor(0.65f, 0.25f, 0.35f, 0.5f);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-		glViewport(0, 0, g_egl.width, g_egl.height);
 
 		vect44 m;
 		m.translate(2,1,9);
+		m.scale(1280.0/720.0 * 2.0 ,2,1);
 		vect44 mat_tex = m*matPers;
 
 		gl_drawModelTex( model_tex, mat_tex, fbo.m_color_tex );

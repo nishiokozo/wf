@@ -23,14 +23,12 @@ typedef struct
    EGLSurface surface;
    EGLContext context;
 
-} INF_OGL;
+} INF_EGL;
 
-static INF_OGL g_egl;
 
-#define check() assert(glGetError() == 0)
 
 //-----------------------------------------------------------------------------
-static void init_ogl(INF_OGL& inf)
+static void init_egl(INF_EGL& inf)
 //-----------------------------------------------------------------------------
 {
 	bcm_host_init();
@@ -53,6 +51,7 @@ static void init_ogl(INF_OGL& inf)
       EGL_GREEN_SIZE, 8,
       EGL_BLUE_SIZE, 8,
       EGL_ALPHA_SIZE, 8,
+      EGL_DEPTH_SIZE, 16,
       EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
       EGL_NONE
    };
@@ -67,27 +66,22 @@ static void init_ogl(INF_OGL& inf)
    // get an EGL display connection
    inf.display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
    assert(inf.display!=EGL_NO_DISPLAY);
-   check();
 
    // initialize the EGL display connection
    result = eglInitialize(inf.display, NULL, NULL);
    assert(EGL_FALSE != result);
-   check();
-
+   
    // get an appropriate EGL frame buffer configuration
    result = eglChooseConfig(inf.display, attribute_list, &config, 1, &num_config);
    assert(EGL_FALSE != result);
-   check();
-
+   
    // get an appropriate EGL frame buffer configuration
    result = eglBindAPI(EGL_OPENGL_ES_API);
    assert(EGL_FALSE != result);
-   check();
-
+   
    // create an EGL rendering context
    inf.context = eglCreateContext(inf.display, config, EGL_NO_CONTEXT, context_attributes);
    assert(inf.context!=EGL_NO_CONTEXT);
-   check();
 
    // create an EGL window surface
    success = graphics_get_display_size(0 /* LCD */, &inf.width, &inf.height);
@@ -115,31 +109,24 @@ static void init_ogl(INF_OGL& inf)
    nativewindow.height = inf.height;
    vc_dispmanx_update_submit_sync( dispman_update );
       
-   check();
-
    inf.surface = eglCreateWindowSurface( inf.display, config, &nativewindow, NULL );
    assert(inf.surface != EGL_NO_SURFACE);
-   check();
-
+   
    // connect the context to the surface
    result = eglMakeCurrent(inf.display, inf.surface, inf.surface, inf.context);
    assert(EGL_FALSE != result);
-   check();
-
-   // Set background color and clear buffers
-//   glClearColor(0.15f, 0.25f, 0.35f, 1.0f);
-//   glClear( GL_COLOR_BUFFER_BIT );
-
-   check();
+   
 }
 
 //---
 
 #include	"vect.h"
 
+//#define //glcheck()	if ( glGetError() )	{printf("info glGetError()= 0x%04x (%d) \n", glGetError(),__LINE__ );}
+#define	glcheck()	assert(glGetError()==GL_NO_ERROR);
 
 //=============================================================================
-class	Fbo
+class	INF_FBO
 //=============================================================================
 {
 public:
@@ -151,49 +138,79 @@ public:
 	int		m_h;
 
 //-----------------------------------------------------------------------------
-Fbo( GLint format, int width, int height )
+INF_FBO( int width, int height )
 //-----------------------------------------------------------------------------
 {
 	memset( this, 0, sizeof(*this));
 	
 	m_w = width;
 	m_h = height;
-#if 0
+#if  1
 	glGenTextures(1, &m_color_tex);
+	glcheck();
 	glBindTexture(GL_TEXTURE_2D, m_color_tex);
+	glcheck();
 //	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_SHORT_5_6_5, NULL);
-	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,0);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,0);	//正常動作
+//	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,0); // 動作しない
+	glcheck();
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glcheck();
 
 	glGenFramebuffers(1, &m_hdlFbo);
+	glcheck();
 	glBindFramebuffer(GL_FRAMEBUFFER, m_hdlFbo);
+	glcheck();
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_color_tex, 0);
+	glcheck();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glcheck();
 #else
 	glGenTextures(1, &m_color_tex);
+	glcheck();
 	glBindTexture(GL_TEXTURE_2D, m_color_tex);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-//	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexImage2D(GL_TEXTURE_2D,0,format,width,height,0,format,GL_UNSIGNED_SHORT_5_6_5,0);
+	glcheck();
+//	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,format,GL_UNSIGNED_SHORT_5_6_5,0);
+	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,format,GL_UNSIGNED_SHORT_4_4_4_4,0);//エラー発生
+	glcheck();
 
 	glGenTextures(1, &m_depth_tex);
+	glcheck();
 	glBindTexture(GL_TEXTURE_2D, m_depth_tex);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glcheck();
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	glcheck();
+//	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, 2, 2, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	glcheck();
+
 	//-------------------------
 	glGenFramebuffers(1, &m_hdlFbo);
+	glcheck();
 	glBindFramebuffer(GL_FRAMEBUFFER, m_hdlFbo);
+	glcheck();
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_color_tex, 0);
+	glcheck();
 //	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depth_tex, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glcheck();
 #endif
 
             GLuint status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -201,6 +218,19 @@ Fbo( GLint format, int width, int height )
 //                cout << status << endl; // this is not called
 				 printf("\nFBO error %d\n", status );
             }
+}
+//-----------------------------------------------------------------------------
+void	begin()
+//-----------------------------------------------------------------------------
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, m_hdlFbo );
+	glViewport(0, 0, m_w, m_h);
+}
+//-----------------------------------------------------------------------------
+void	end()
+//-----------------------------------------------------------------------------
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0 );
 }
 
 };
@@ -221,7 +251,7 @@ struct INF_TEX
 	INF_TEX( GLint format, GLsizei width, GLsizei height, GLint WRAP_S, GLint WRAP_T, GLint MAG_FILTER, GLint MIN_FILTER )
 	{
 		m_format		= format;
-		m_width		= width;
+		m_width			= width;
 		m_height		= height;
 		m_WRAP_S	 	= WRAP_S;
 		m_WRAP_T	 	= WRAP_T;
@@ -307,12 +337,19 @@ void	gl_setModel( INF_MODEL& m
 		INF_TEX&	t = pTex[0];
 
 		glGenTextures(1, &t.m_hdlTex); //生成数
+		glcheck();
 		glBindTexture(GL_TEXTURE_2D, t.m_hdlTex);
+		glcheck();
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);	//1, 2, 4, or 8
+		glcheck();
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, t.m_WRAP_S);
+		glcheck();
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, t.m_WRAP_T);
+		glcheck();
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, t.m_MAG_FILTER);
+		glcheck();
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, t.m_MIN_FILTER);
+		glcheck();
 		glTexImage2D(GL_TEXTURE_2D, 0
 			, t.m_format
 			, t.m_width
@@ -320,6 +357,7 @@ void	gl_setModel( INF_MODEL& m
 			, t.m_format, GL_UNSIGNED_BYTE
 			, tex_pixels
 		);
+		glcheck();
 
 	 	m.m_pTex = (INF_TEX*)malloc(sizeof(INF_TEX));
 	 	*m.m_pTex = t;
@@ -327,38 +365,57 @@ void	gl_setModel( INF_MODEL& m
 	
 	{// 頂点バッファ登録
 		glGenBuffers(1, &m.m_hdlVert);
+		glcheck();
 		glBindBuffer(GL_ARRAY_BUFFER, m.m_hdlVert);
+		glcheck();
 		glBufferData(GL_ARRAY_BUFFER, sizeVert, tblVert, GL_STATIC_DRAW);
+		glcheck();
 	}
 
 	{// インデックスバッファ登録
 		// index buffer
 		glGenBuffers(1, &m.m_hdlIndex);
+		glcheck();
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m.m_hdlIndex);
+		glcheck();
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort)*cntIndex, tblIndex, GL_STATIC_DRAW);
+		glcheck();
 	}
 
   	{// シェーダー登録
 		m.m_hdlprogram = glCreateProgram();
+			glcheck();
 		{
 			GLuint hdl = glCreateShader(GL_VERTEX_SHADER);
+			glcheck();
 			glShaderSource(hdl, 1, &srcVert, NULL);
+			glcheck();
 			glCompileShader(hdl);
+			glcheck();
 			glAttachShader(m.m_hdlprogram, hdl);
+			glcheck();
 			glDeleteShader(hdl);
+			glcheck();
 		}
 
 		{
 			GLuint hdl = glCreateShader(GL_FRAGMENT_SHADER);
+			glcheck();
 			glShaderSource(hdl, 1, &srcFlag, NULL);
+			glcheck();
 			glCompileShader(hdl);
+			glcheck();
 			glAttachShader(m.m_hdlprogram, hdl);
+			glcheck();
 			glDeleteShader(hdl);
+			glcheck();
 		}
 
 		glLinkProgram(m.m_hdlprogram);
 		m.m_shaderMat	= glGetUniformLocation( m.m_hdlprogram, "Mat" );
+		glcheck();
 		m.m_shaderTex	= glGetUniformLocation(m.m_hdlprogram,"Texture");
+		glcheck();
 	}
 	{// レンダリングパラメータ生成
 		m.m_pForm = (INF_FORM*)malloc( sizeof(INF_FORM[cntForm]) );
@@ -378,6 +435,7 @@ void	gl_setModel( INF_MODEL& m
 			//--
 			
 			m.m_pForm[i].shaderAttr	= glGetAttribLocation(m.m_hdlprogram, m.m_pForm[i].name );
+			glcheck();
 		}
 
 	}
@@ -458,14 +516,150 @@ void	gl_drawModelTex( INF_MODEL& m, vect44& mat, GLuint hdlTex )
 	glDrawElements( m.m_mode, m.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
 }
 
+// シェーダコンパイルのログバッファ 
+#define MAX_SHADER_LOG_SIZE		(1024)
+static	char s_logBuffer[MAX_SHADER_LOG_SIZE]; 
+//-----------------------------------------------------------------------------
+static void printShaderInfoLog(
+//-----------------------------------------------------------------------------
+	GLuint shader
+)
+{
+	int logSize;
+	int length;
+
+	// ログの長さは、最後のNULL文字も含む 
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH , &logSize);
+	glcheck();
+
+	if (logSize > 1)
+	{
+		glGetShaderInfoLog(shader, MAX_SHADER_LOG_SIZE, &length, s_logBuffer);
+		glcheck();
+		printf( "printShaderInfoLog:%s\n", s_logBuffer );
+	}
+}
+class INF_FILE
+{
+	FILE*	m_fp;
+	int		m_len;
+	bool	m_error;
+	char*	m_pBuf;
+
+	INF_FILE( const char* fn )
+	{
+		if ((m_fp = fopen(fn, "rb")) == NULL) 
+		{
+			m_error = true;
+			return;
+		}
+		else
+		{
+			fseek(m_fp, 0, SEEK_END);
+			m_len = (int)ftell(m_fp);
+			fseek(m_fp, 0, SEEK_SET);
+
+			m_pBuf = (char*)malloc( m_len );
+			fread( m_pBuf, 1, m_len, m_fp);
+
+			fclose( m_fp );
+		
+		}
+	}
+
+	~INF_FILE()
+	{
+		fclose( m_fp );
+		free( m_pBuf );
+	}
+
+};
+//-----------------------------------------------------------------------------
+bool	file_malloc_Load( const char* fname, char** ppBuf, int* pLen )
+//-----------------------------------------------------------------------------
+{
+	char*	fbuf = 0;
+	int		flen = 0;
+	{
+
+		FILE*	fp = 0;
+		if ((fp = fopen(fname, "rb")) == NULL)
+		{
+			printf( "File error [%s]\n", fname );
+			return	false;
+		}
+		else
+		{
+			{
+				fseek(fp, 0, SEEK_END);
+				flen = (int)ftell(fp);
+				fseek(fp, 0, SEEK_SET);
+			}
+			{
+				fbuf = (char*)malloc( flen );
+//				fbuf = new char( flen );
+				fread(fbuf, 1, flen, fp);
+			}
+			fclose( fp );
+		}
+	}
+	(*ppBuf) = fbuf;
+	(*pLen) = flen;
+
+	return	true;
+}
+
+//-----------------------------------------------------------------------------
+bool shader_Compile(
+//-----------------------------------------------------------------------------
+	int		hdlProgram,
+	int		type,
+	const char*	fn
+)
+{
+	GLint result;
+
+	char*	pBuf = 0; 
+	int		len = 0;
+
+	file_malloc_Load( fn, &pBuf, &len );
+	GLuint hdl = glCreateShader(type);
+	glcheck();
+	glShaderSource( hdl, 1, (const char **)&pBuf, &len);
+	glcheck();
+	glCompileShader( hdl );
+	glcheck();
+	glGetShaderiv( hdl, GL_COMPILE_STATUS, &result);
+	glcheck();
+
+	printShaderInfoLog( hdl );
+	if (result == GL_FALSE)
+	{
+		fprintf(stderr, "Compile error at [%s]\n", fn);
+	}
+
+	glAttachShader( hdlProgram, hdl );
+	glcheck();
+	glDeleteShader( hdl );
+	glcheck();
+
+//printf("src:%s\n", pBuf);
+	if ( pBuf ) {free( pBuf );pBuf = 0;}
+	return	true;
+}
+
 //-----------------------------------------------------------------------------
 int main( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
 {
+	INF_EGL g_egl;
 	// EGL 初期化	
-	init_ogl(g_egl);
+	init_egl(g_egl);
 
-	Fbo	fbo( GL_RGB, 512/2, 512/2 );
+#define	SIZE 512
+
+	INF_FBO	fbo( SIZE, SIZE );
+	
 
 	INF_MODEL model_wf;
 	{
@@ -620,55 +814,47 @@ int main( int argc, char *argv[] )
 		);
 	}
 
-
-
 	vect44	matPers;
 	vect44	matModel;
 
 
 	// GL環境設定
 	glEnable(GL_CULL_FACE);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0);
-   glClearColor(0.15f, 0.25f, 0.35f, 1.0f);
+	glClearColor(0.15f, 0.25f, 0.35f, 1.0f);
 
 	while(1) 
 	{
-//        glBindFramebuffer(GL_FRAMEBUFFER,state_tex_fb);
-		glBindFramebuffer(GL_FRAMEBUFFER, fbo.m_hdlFbo );
-		glViewport(0, 0, fbo.m_w, fbo.m_h);
+		fbo.begin();
 
-//		glViewport(0, 0, 2,2);
-//	glClearColor(0.0f, 0.0f, 0.5f, 1.0);
-//		glClear(GL_COLOR_BUFFER_BIT);
+			glClearColor(0.15f, 0.25f, 0.35f,1.0f);
+	        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+
+			// 射影行列をセット
+			matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
+
+			// モデル行列をセット
+			matModel.identity();
+
+			static float rad =0;
+			rad += RAD(1);
+			matModel.rotX(rad/3);
+			matModel.rotY(rad);
+			matModel.translate(-0.2 , 0.2, 5 );
+			vect44 mat_wf = matModel*matPers;
+			gl_drawModel( model_wf, mat_wf );
+
+		fbo.end();
+
+		glClearColor(0.65f, 0.25f, 0.35f, 0.5f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-
-		// 射影行列をセット
-		matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
-
-		// モデル行列をセット
-		matModel.identity();
-
-		static float rad =0;
-		rad += RAD(1);
-		matModel.rotX(rad/3);
-		matModel.rotY(rad);
-		matModel.translate(-0.2 , 0.2, 5 );
-		vect44 mat_wf = matModel*matPers;
-		gl_drawModel( model_wf, mat_wf );
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0 );
-
 		glViewport(0, 0, g_egl.width, g_egl.height);
-//	glClearColor(0.0f, 0.5f, 0.2f, 1.0);
-//		glClear(GL_COLOR_BUFFER_BIT);
 
 		vect44 m;
 		m.translate(2,1,9);
 		vect44 mat_tex = m*matPers;
-//		gl_drawModelTex( model_tex, mat_tex, state_tex_col );
+
 		gl_drawModelTex( model_tex, mat_tex, fbo.m_color_tex );
-//		gl_drawModelTex( model_tex, mat_tex, model_tex.m_pTex->m_hdlTex );
 
 
 

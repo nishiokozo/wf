@@ -9,7 +9,7 @@ LDFLAGS+=-L$(SDKSTAGE)/opt/vc/lib/ -lbrcmGLESv2 -lbrcmEGL -lopenmaxil -lbcm_host
 
 #INCLUDES+=-I$(SDKSTAGE)/opt/vc/include/ -I$(SDKSTAGE)/opt/vc/include/interface/vcos/pthreads -I$(SDKSTAGE)/opt/vc/include/interface/vmcs_host/linux 
 
-CFLAGS=-O2 -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function
+CFLAGS=-O2 -Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function  -std=c++11
 #LDFLAGS="-lGLESv2 -lEGL -lm -lbcm_host -L/opt/vc/lib"
 INCLUDES=-I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host/linux
 

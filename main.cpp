@@ -4,11 +4,11 @@
 //#include <iostream>
 #include <new>
 #include <stdio.h>
-#include <memory.h>
-#include <assert.h>
+//#include <memory.h>
 #include <math.h>
-#include <assert.h>
-#include <unistd.h>
+//#include <assert.h>
+#include <cassert>
+//#include <unistd.h>
 #include "bcm_host.h"
 #include "GLES2/gl2.h"
 #include "EGL/egl.h"
@@ -153,8 +153,12 @@ INF_FBO( int width, int height )
 	glBindTexture(GL_TEXTURE_2D, m_color_tex);
 	glcheck();
 //	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_SHORT_5_6_5, NULL);
-	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,0);	//正常動作
+ #if 0
+ 	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,0);	//正常動作
 //	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,0); // 動作しない
+ #else
+ 	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,0);
+ #endif
 	glcheck();
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -250,8 +254,6 @@ struct INF_TEX
 	GLint 	m_MAG_FILTER ;
 	GLint 	m_MIN_FILTER ;
 	//
-	GLuint m_hdlTex;
-
 	INF_TEX( GLint format, GLsizei width, GLsizei height, GLint WRAP_S, GLint WRAP_T, GLint MAG_FILTER, GLint MIN_FILTER )
 	{
 		m_format		= format;
@@ -262,16 +264,21 @@ struct INF_TEX
 		m_MAG_FILTER	= MAG_FILTER;
 		m_MIN_FILTER	= MIN_FILTER;
 		//
-		m_hdlTex=0;
 	}
 };
 
-struct INF_FORM
+struct INF_ATTR
 {
 	char	name[16];
 	void*	pOfs;
 	int 	size;
-	GLint 	shaderAttr;
+	GLint 	hdl;
+};
+struct INF_UNIFORM
+{
+	char	name[16];
+	int 	size;
+	GLuint  hdl;
 };
 
 struct INF_MODEL
@@ -282,15 +289,19 @@ struct INF_MODEL
 	GLuint  m_hdlIndex;
 	GLuint  m_hdlprogram;
 	GLuint  m_shaderMat;
-	GLuint  m_shaderTex;	//Sampler2D
 	GLsizei	m_cntIndex;
 	//
 	GLsizei m_stride;
 	GLvoid* m_ptrPos;
 	GLvoid* m_ptrUv;
-	INF_FORM*	m_pForm;
-	int			m_cntForm;
-	INF_TEX*	m_pTex;
+	INF_ATTR*		m_pAttr;
+	int				m_cntAttr;
+	INF_UNIFORM*	m_pUniform;
+	int				m_cntUniform;
+	//
+	static const int	m_NUM_TEX = 4;
+	GLuint		m_hdlTex[m_NUM_TEX];
+	int			m_cntTex;
 
 	INF_MODEL()
 	{
@@ -300,15 +311,16 @@ struct INF_MODEL
 		m_hdlIndex = 0;
 		m_hdlprogram = 0;
 		m_shaderMat = 0;
-		m_shaderTex = 0;
 		m_cntIndex = 0;
 		//
 		m_stride	= 0;
 		m_ptrPos	= 0;
 		m_ptrUv	= 0;
-		m_pForm = 0;
-		m_cntForm = 0;
-		m_pTex = 0;
+		m_pAttr = 0;
+		m_cntAttr = 0;
+		//
+		m_hdlTex[0]= 0;
+		m_cntTex = 0;
 	}
 };
 
@@ -319,30 +331,32 @@ struct INF_MODEL
 //-----------------------------------------------------------------------------
 void	gl_setModel( INF_MODEL& m
 //-----------------------------------------------------------------------------
-	, GLfloat* tblVert
-	, GLushort* tblIndex
-	, const GLchar *srcVert
-	, const GLchar *srcFlag
-	, GLsizei cntIndex
-	, GLenum mode
-	, int sizeVert
-	, INF_FORM pForm[]
-	, int cntForm
-	, INF_TEX	pTex[]
-	, GLvoid *tex_pixels
+	, GLfloat* 		tblVert
+	, GLushort* 	tblIndex
+	, const GLchar*	srcVert
+	, const GLchar*	srcFlag
+	, GLsizei 		cntIndex
+	, GLenum 		mode
+	, int 			sizeVert
+	, const INF_ATTR 	pAttr[]
+	, int 				cntAttr
+	, const INF_UNIFORM	pUniform[]
+	, int 				cntUniform
+	, const INF_TEX		pTex[]
+	, GLvoid*			tex_pixels
 )
 {
+
 	m.m_mode = mode;
  	m.m_cntIndex = cntIndex;
- 	m.m_pTex = 0;
 
-	if( pTex != 0 )
+	if( pTex != 0 && m.m_cntTex < m.m_NUM_TEX )
 	{//テクスチャ生成
-		INF_TEX&	t = pTex[0];
+		const INF_TEX&	t = pTex[0];
 
-		glGenTextures(1, &t.m_hdlTex); //生成数
+		glGenTextures(1, &m.m_hdlTex[m.m_cntTex]); //生成数
 		glcheck();
-		glBindTexture(GL_TEXTURE_2D, t.m_hdlTex);
+		glBindTexture(GL_TEXTURE_2D, m.m_hdlTex[m.m_cntTex]);
 		glcheck();
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);	//1, 2, 4, or 8
 		glcheck();
@@ -362,9 +376,8 @@ void	gl_setModel( INF_MODEL& m
 			, tex_pixels
 		);
 		glcheck();
+		m.m_cntTex++;
 
-	 	m.m_pTex = (INF_TEX*)malloc(sizeof(INF_TEX));
-	 	*m.m_pTex = t;
 	}
 	
 	{// 頂点バッファ登録
@@ -416,33 +429,48 @@ void	gl_setModel( INF_MODEL& m
 		}
 
 		glLinkProgram(m.m_hdlprogram);
-		m.m_shaderMat	= glGetUniformLocation( m.m_hdlprogram, "Mat" );
-		glcheck();
-		m.m_shaderTex	= glGetUniformLocation(m.m_hdlprogram,"Texture");
-		glcheck();
 	}
-	{// レンダリングパラメータ生成
-		m.m_pForm = (INF_FORM*)malloc( sizeof(INF_FORM[cntForm]) );
 
-	 	m.m_stride = 0;
-	 	m.m_cntForm = cntForm;
-		for ( int i = 0 ; i < cntForm ; i++ )
+	{//シェーダー内変数
+		m.m_pUniform = (INF_UNIFORM*)malloc( sizeof(INF_UNIFORM[cntUniform]) );
+		m.m_cntUniform = cntUniform;
+		// 
+		for ( int i = 0 ; i < cntUniform ; i++ )
 		{
-		 	m.m_pForm[i].pOfs	= pForm[i].pOfs;
+			strcpy( m.m_pUniform[i].name, pUniform[i].name );
 
-		 	m.m_pForm[i].size	= pForm[i].size;
+		 	m.m_pUniform[i].size	= pUniform[i].size;
 
-			strcpy( m.m_pForm[i].name, pForm[i].name );
+			m.m_pUniform[i].hdl	= glGetUniformLocation( m.m_hdlprogram, pUniform[i].name );
+//			m.m_pUniform[i].hdl	= glGetUniformLocation( m.m_hdlprogram, "Mat" );
+			glcheck();
+		}
+	}
 
-		 	m.m_stride += pForm[i].size*sizeof(GLfloat);
+	{// レンダリングパラメータ生成
+		m.m_pAttr = (INF_ATTR*)malloc( sizeof(INF_ATTR[cntAttr]) );
+	 	m.m_cntAttr = cntAttr;
+	 	m.m_stride = 0;
+		//
+		for ( int i = 0 ; i < cntAttr ; i++ )
+		{
+			strcpy( m.m_pAttr[i].name, pAttr[i].name );
+
+		 	m.m_pAttr[i].pOfs	= pAttr[i].pOfs;
+
+		 	m.m_pAttr[i].size	= pAttr[i].size;
+
+			m.m_pAttr[i].hdl	= glGetAttribLocation(m.m_hdlprogram, m.m_pAttr[i].name );
+			glcheck();
 			
 			//--
-			
-			m.m_pForm[i].shaderAttr	= glGetAttribLocation(m.m_hdlprogram, m.m_pForm[i].name );
-			glcheck();
+
+		 	m.m_stride += pAttr[i].size*sizeof(GLfloat);
 		}
 
 	}
+
+
 }
 //-----------------------------------------------------------------------------
 void	gl_drawModel( INF_MODEL& m, vect44& mat )
@@ -451,68 +479,42 @@ void	gl_drawModel( INF_MODEL& m, vect44& mat )
 	glUseProgram( m.m_hdlprogram );
 
 	// テクスチャ
-	if ( m.m_pTex )
+	if ( m.m_cntTex > 0 )
 	{
 		glActiveTexture( GL_TEXTURE0 );
-		glBindTexture( GL_TEXTURE_2D, m.m_pTex->m_hdlTex );
+		glBindTexture( GL_TEXTURE_2D, m.m_hdlTex[0] );
 	}
 
 
 	// 頂点
-	glUniformMatrix4fv( m.m_shaderMat, 1, GL_FALSE, mat.GetArray() );
+//	glUniformMatrix4fv( m.m_shaderMat, 1, GL_FALSE, mat.GetArray() );
+	for ( int i = 0 ; i < m.m_cntUniform ; i++ )
+	{
+		switch(  m.m_pUniform[i].size )
+		{
+		case 4:
+			glUniformMatrix4fv( m.m_pUniform[i].hdl, 1, GL_FALSE, mat.GetArray() );
+			break;
+		default:
+			assert(0);
+		}
+	}
+
 
 	glBindBuffer( GL_ARRAY_BUFFER,  m.m_hdlVert );
 
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  m.m_hdlIndex );
 
-	for ( int i = 0 ; i < m.m_cntForm ; i++ )
+	for ( int i = 0 ; i < m.m_cntAttr ; i++ )
 	{
-		glEnableVertexAttribArray( m.m_pForm[i].shaderAttr );
+		glEnableVertexAttribArray( m.m_pAttr[i].hdl );
 		glVertexAttribPointer( 
-			  m.m_pForm[i].shaderAttr
-			, m.m_pForm[i].size
+			  m.m_pAttr[i].hdl
+			, m.m_pAttr[i].size
 			, GL_FLOAT
 			, GL_FALSE
 			, m.m_stride
-			, m.m_pForm[i].pOfs 
-		);
-	}
-	glEnableVertexAttribArray(0);
-
-	glDrawElements( m.m_mode, m.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
-}
-//-----------------------------------------------------------------------------
-void	gl_drawModelTex( INF_MODEL& m, vect44& mat, GLuint hdlTex )
-//-----------------------------------------------------------------------------
-{
-	glUseProgram( m.m_hdlprogram );
-
-	// テクスチャ
-//	if ( m.m_pTex )
-	{
-		glUniform1i( m.m_shaderTex, 0);
-		glActiveTexture( GL_TEXTURE0 );
-		glBindTexture( GL_TEXTURE_2D, hdlTex );
-	}
-
-
-	// 頂点
-	glUniformMatrix4fv( m.m_shaderMat, 1, GL_FALSE, mat.GetArray() );
-
-	glBindBuffer( GL_ARRAY_BUFFER,  m.m_hdlVert );
-
-	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  m.m_hdlIndex );
-
-	for ( int i = 0 ; i < m.m_cntForm ; i++ )
-	{
-		glEnableVertexAttribArray( m.m_pForm[i].shaderAttr );
-		glVertexAttribPointer( 
-			  m.m_pForm[i].shaderAttr
-			, m.m_pForm[i].size
-			, GL_FLOAT
-			, GL_FALSE
-			, m.m_stride
-			, m.m_pForm[i].pOfs 
+			, m.m_pAttr[i].pOfs 
 		);
 	}
 	glEnableVertexAttribArray(0);
@@ -520,38 +522,19 @@ void	gl_drawModelTex( INF_MODEL& m, vect44& mat, GLuint hdlTex )
 	glDrawElements( m.m_mode, m.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
 }
 
-// シェーダコンパイルのログバッファ 
-#define MAX_SHADER_LOG_SIZE		(1024)
-static	char s_logBuffer[MAX_SHADER_LOG_SIZE]; 
 //-----------------------------------------------------------------------------
-static void printShaderInfoLog(
+class InfFile
 //-----------------------------------------------------------------------------
-	GLuint shader
-)
 {
-	int logSize;
-	int length;
-
-	// ログの長さは、最後のNULL文字も含む 
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH , &logSize);
-	glcheck();
-
-	if (logSize > 1)
-	{
-		glGetShaderInfoLog(shader, MAX_SHADER_LOG_SIZE, &length, s_logBuffer);
-		glcheck();
-		printf( "printShaderInfoLog:%s\n", s_logBuffer );
-	}
-}
-class INF_FILE
-{
+public:
 	FILE*	m_fp;
 	int		m_len;
 	bool	m_error;
 	char*	m_pBuf;
 
-	INF_FILE( const char* fn )
+	InfFile( const char* fn )
 	{
+		m_pBuf = 0;
 		if ((m_fp = fopen(fn, "rb")) == NULL) 
 		{
 			m_error = true;
@@ -571,7 +554,7 @@ class INF_FILE
 		}
 	}
 
-	~INF_FILE()
+	~InfFile()
 	{
 		fclose( m_fp );
 		free( m_pBuf );
@@ -579,7 +562,7 @@ class INF_FILE
 
 };
 //-----------------------------------------------------------------------------
-bool	file_malloc_Load( const char* fname, char** ppBuf, int* pLen )
+bool	file_malloc_Load( const char* fname, char** ppBuf )
 //-----------------------------------------------------------------------------
 {
 	char*	fbuf = 0;
@@ -608,47 +591,8 @@ bool	file_malloc_Load( const char* fname, char** ppBuf, int* pLen )
 		}
 	}
 	(*ppBuf) = fbuf;
-	(*pLen) = flen;
+//	(*pLen) = flen;
 
-	return	true;
-}
-
-//-----------------------------------------------------------------------------
-bool shader_Compile(
-//-----------------------------------------------------------------------------
-	int		hdlProgram,
-	int		type,
-	const char*	fn
-)
-{
-	GLint result;
-
-	char*	pBuf = 0; 
-	int		len = 0;
-
-	file_malloc_Load( fn, &pBuf, &len );
-	GLuint hdl = glCreateShader(type);
-	glcheck();
-	glShaderSource( hdl, 1, (const char **)&pBuf, &len);
-	glcheck();
-	glCompileShader( hdl );
-	glcheck();
-	glGetShaderiv( hdl, GL_COMPILE_STATUS, &result);
-	glcheck();
-
-	printShaderInfoLog( hdl );
-	if (result == GL_FALSE)
-	{
-		fprintf(stderr, "Compile error at [%s]\n", fn);
-	}
-
-	glAttachShader( hdlProgram, hdl );
-	glcheck();
-	glDeleteShader( hdl );
-	glcheck();
-
-//printf("src:%s\n", pBuf);
-	if ( pBuf ) {free( pBuf );pBuf = 0;}
 	return	true;
 }
 
@@ -656,21 +600,24 @@ bool shader_Compile(
 int main( int argc, char *argv[] )
 //-----------------------------------------------------------------------------
 {
-	INF_EGL g_egl;
+	INF_EGL infEgl;
 	// EGL 初期化	
-	init_egl(g_egl);
-
-
-	INF_FBO	fbo( 1280/2, 720/2 );
-	
+	init_egl(infEgl);
+	printf("%dx%d\n", infEgl.width, infEgl.height );
 
 	INF_MODEL model_wf;
 	{
-		INF_FORM pForm[] = 
+		INF_ATTR infAttr[] = 
 		{
 			{"Pos"	, (void*)(0),	3},		//Pos
 		};
-		int cntForm = sizeof(pForm)/sizeof(INF_FORM);
+		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
+
+		INF_UNIFORM infUniform[] = 
+		{
+			{"Mat"	, 4},
+		};
+		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
 
 		GLfloat tblVert[] = 
 		{
@@ -703,19 +650,22 @@ int main( int argc, char *argv[] )
 		int cntIndex = sizeof(tblIndex)/sizeof(GLushort);
 
 		const GLchar *srcVert = // GLSLは列ｘ行。なので左からマトリクスをかける
-			"uniform mat4	Mat;							\n"
-			"attribute vec3	Pos;							\n"
-			"void main() 									\n"
-			"{ 												\n"
-			"	 gl_Position = Mat * vec4(Pos,1);			\n" // 左から掛ける
-			"}								 				\n"
+			"uniform mat4	Mat;												\n"
+			"attribute vec3	Pos;												\n"
+			"void main() 														\n"
+			"{ 																	\n"
+			"	 gl_Position = Mat * vec4(Pos,1);								\n" // 左から掛ける
+			"}								 									\n"
 		;
 		const GLchar *srcFlag =
-			"precision mediump float;						\n"
-			"void main()									\n"
-			"{												\n"
-			"	gl_FragColor = vec4( 1,1, 1, 1.0);			\n"
-			"}												\n"
+			"void main()														\n"
+			"{																	\n"
+			"																	\n"
+			"																	\n"
+			"																	\n"
+			"																	\n"
+			"	gl_FragColor = vec4( 1,1, 1, 1.0);								\n"
+			"}																	\n"
 		;
 
 		gl_setModel( 
@@ -727,8 +677,10 @@ int main( int argc, char *argv[] )
 			, cntIndex
 			, GL_LINES
 			, sizeof(tblVert)
-			, pForm
-			, cntForm
+			, infAttr
+			, cntAttr
+			, infUniform
+			, cntUniform
 			, 0,0
 		);
 
@@ -736,13 +688,19 @@ int main( int argc, char *argv[] )
 
 	INF_MODEL model_tex;
 	{
-		INF_FORM pForm[] = 
+		INF_ATTR infAttr[] = 
 		{
 			{"Pos"	, (void*)(0),	3},		//Pos
 			{"Uv"	, (void*)(12),	2},		//Uv
 		};
-		int cntForm = sizeof(pForm)/sizeof(INF_FORM);
-		
+		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
+
+		INF_UNIFORM infUniform[] = 
+		{
+			{"Mat"	, 4},
+		};
+		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+
 		GLfloat tblVert[] = 
 		{
 		   -1,-1, 0 ,	 0, 0,
@@ -757,24 +715,24 @@ int main( int argc, char *argv[] )
 		int cntIndex = sizeof(tblIndex)/sizeof(GLushort);
 		
 		const GLchar *srcVert = // GLSLは列ｘ行。なので左からマトリクスをかける
-			"uniform mat4	Mat;							\n"
-			"attribute vec3	Pos;							\n"
-			"attribute vec2	Uv;								\n"
-			"varying vec2	vUv;							\n"
-			"void main() 									\n"
-			"{ 												\n"
-			"	vUv = Uv;									\n"
-			"	 gl_Position = Mat * vec4(Pos,1);			\n" // 左から掛ける
-			"}								 				\n"
+			"uniform mat4	Mat;												\n"
+			"attribute vec3	Pos;												\n"
+			"attribute vec2	Uv;													\n"
+			"varying vec2	uv;													\n"
+			"void main() 														\n"
+			"{ 																	\n"
+			"	uv = Uv;														\n"
+			"	 gl_Position = Mat * vec4(Pos,1);								\n" // 左から掛ける
+			"}								 									\n"
 		;
 		const GLchar *srcFlag =
-			"precision mediump float;						\n"
-			"varying	vec2 vUv;							\n"
-			"uniform sampler2D uTexture;					\n"
-			"void main()									\n"
-			"{												\n"
-			"	gl_FragColor = texture2D(uTexture,vec2(vUv.x,vUv.y));			\n"
-			"}												\n"
+			"precision mediump float;											\n"
+			"varying	vec2 uv;												\n"
+			"uniform sampler2D uTexture;										\n"
+			"void main()														\n"
+			"{																	\n"
+			"	gl_FragColor = texture2D(uTexture,vec2(uv.x,uv.y));				\n"
+			"}																																							\n"
 		;
 
 		INF_TEX	infTex(
@@ -811,11 +769,213 @@ int main( int argc, char *argv[] )
 			, cntIndex
 			, GL_TRIANGLE_STRIP
 			, sizeof(tblVert)
-			, pForm
-			, cntForm
+			, infAttr
+			, cntAttr
+			, infUniform
+			, cntUniform
 			, &infTex, tex_pixels
 		);
 	}
+	
+	INF_MODEL model_gaus_v;
+	{
+		INF_ATTR infAttr[] = 
+		{
+			{"Pos"	, (void*)(0),	3},		//Pos
+			{"Uv"	, (void*)(12),	2},		//Uv
+		};
+		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
+
+		INF_UNIFORM infUniform[] = 
+		{
+			{"Mat"	, 4},
+		};
+		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+		
+		GLfloat tblVert[] = 
+		{
+		   -1,-1, 0 ,	 0, 0,
+		    1,-1, 0 ,	 1, 0,
+		   -1, 1, 0 ,	 0, 1,
+		    1, 1, 0 ,	 1, 1,
+		};
+		GLushort tblIndex[] = 
+		{
+			0,1,2,3,
+		};
+		int cntIndex = sizeof(tblIndex)/sizeof(GLushort);
+
+		const GLchar *srcVert =
+			"uniform mat4 Mat;													\n"
+			"attribute vec3 Pos;												\n"
+			"attribute vec2 Uv;													\n"
+			"varying	vec2 uv;												\n"
+			"void main(void)													\n"
+			"{																	\n"
+			"	uv = Uv;														\n"
+			"	gl_Position = Mat * vec4(Pos,1);								\n"
+			"}																																							\n"
+		;
+//		GLchar *srcFlag = 0;		file_malloc_Load( "gaussian-v.fs", &srcFlag );
+		const GLchar *srcFlag = 
+			"uniform sampler2D	Tex;											\n"
+			"varying	vec2	uv;												\n"
+			"uniform float	ofs;												\n"
+			"																	\n"
+			"void main (void)													\n"
+			"{																	\n"
+			"	vec4	col = vec4( 0.0, 0.0, 0.0, 1.0 );						\n"
+			"	float	ofs = 1.0/(720.0/2.0);									\n"
+			"																	\n"
+			"	col  = texture2D( Tex, uv ) * 0.133176 ;						\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*1.0 ) ) * 0.125979;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*1.0 ) ) * 0.125979;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*2.0 ) ) * 0.106639;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*2.0 ) ) * 0.106639;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*3.0 ) ) * 0.080775;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*3.0 ) ) * 0.080775;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*4.0 ) ) * 0.054750;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*4.0 ) ) * 0.054750;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*5.0 ) ) * 0.033208;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*5.0 ) ) * 0.033208;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*6.0 ) ) * 0.018023;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*6.0 ) ) * 0.018023;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*7.0 ) ) * 0.008753;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*7.0 ) ) * 0.008753;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*8.0 ) ) * 0.003804;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*8.0 ) ) * 0.003804;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs*9.0 ) ) * 0.001479;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs*9.0 ) ) * 0.001479;	\n"
+			"	gl_FragColor = col;												\n"
+			"}																	\n"
+		;
+		gl_setModel( 
+			  model_gaus_v
+			, tblVert
+			, tblIndex
+			, srcVert
+			, srcFlag
+			, cntIndex
+			, GL_TRIANGLE_STRIP
+			, sizeof(tblVert)
+			, infAttr
+			, cntAttr
+			, infUniform
+			, cntUniform
+			, 0, 0
+		);
+	}
+	INF_MODEL model_gaus_h;
+	{
+		INF_ATTR infAttr[] = 
+		{
+			{"Pos"	, (void*)(0),	3},		//Pos
+			{"Uv"	, (void*)(12),	2},		//Uv
+		};
+		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
+		
+		INF_UNIFORM infUniform[] = 
+		{
+			{"Mat"	, 4},
+		};
+		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+
+		GLfloat tblVert[] = 
+		{
+		   -1,-1, 0 ,	 0, 0,
+		    1,-1, 0 ,	 1, 0,
+		   -1, 1, 0 ,	 0, 1,
+		    1, 1, 0 ,	 1, 1,
+		};
+		GLushort tblIndex[] = 
+		{
+			0,1,2,3,
+		};
+		int cntIndex = sizeof(tblIndex)/sizeof(GLushort);
+
+		const GLchar *srcVert =
+			"uniform mat4 Mat;													\n"
+			"attribute vec3 Pos;												\n"
+			"attribute vec2 Uv;													\n"
+			"varying	vec2 uv;												\n"
+			"void main(void)													\n"
+			"{																	\n"
+			"	uv = Uv;														\n"
+			"	gl_Position = Mat * vec4(Pos,1);								\n"
+			"}																																							\n"
+		;
+//		file_malloc_Load( "gaussian-h.fs", &srcFlag );
+		const GLchar *srcFlag =
+			"uniform sampler2D	Tex;																																						\n"
+			"varying	vec2	uv;												\n"
+			"uniform float	ofset;												\n"
+			"																	\n"
+			"void main (void)													\n"
+			"{																	\n"
+			"	vec4	col = vec4( 0.0, 0.0, 0.0, 1.0 );						\n"
+			"	float	ofs = 1.0/(1280.0/2.0);									\n"
+			"	col  = texture2D( Tex, uv ) * 0.133176 ;						\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*1.0, 0 ) ) * 0.125979;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*1.0, 0 ) ) * 0.125979;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*2.0, 0 ) ) * 0.106639;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*2.0, 0 ) ) * 0.106639;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*3.0, 0 ) ) * 0.080775;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*3.0, 0 ) ) * 0.080775;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*4.0, 0 ) ) * 0.054750;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*4.0, 0 ) ) * 0.054750;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*5.0, 0 ) ) * 0.033208;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*5.0, 0 ) ) * 0.033208;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*6.0, 0 ) ) * 0.018023;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*6.0, 0 ) ) * 0.018023;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*7.0, 0 ) ) * 0.008753;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*7.0, 0 ) ) * 0.008753;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*8.0, 0 ) ) * 0.003804;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*8.0, 0 ) ) * 0.003804;	\n"
+			"																	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*9.0, 0 ) ) * 0.001479;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs*9.0, 0 ) ) * 0.001479;	\n"
+			"																	\n"
+			"	gl_FragColor = col;												\n"
+			"}																	\n"
+		;
+		gl_setModel( 
+			  model_gaus_h
+			, tblVert
+			, tblIndex
+			, srcVert
+			, srcFlag
+			, cntIndex
+			, GL_TRIANGLE_STRIP
+			, sizeof(tblVert)
+			, infAttr
+			, cntAttr
+			, infUniform
+			, cntUniform
+			, 0,0
+		);
+	}
+	
+
+	INF_FBO	fbo1( 1280/2, 720/2 );
+	INF_FBO	fbo2( 1280/2, 720/2 );
+	
 
 	vect44	matPers;
 	vect44	matModel;
@@ -825,18 +985,17 @@ int main( int argc, char *argv[] )
 	glEnable(GL_CULL_FACE);
 	glClearColor(0.15f, 0.25f, 0.35f, 1.0f);
 
+	vect44 mIdent;	
+
 	while(1) 
 	{
-		glClearColor(0.65f, 0.25f, 0.35f, 0.5f);
+		glClearColor(0, 0, 0, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-		glViewport(0, 0, g_egl.width, g_egl.height);
+		glViewport(0, 0, infEgl.width, infEgl.height);
 
 
-		fbo.begin();
-
-			glClearColor(0.15f, 0.25f, 0.35f,1.0f);
+		fbo1.begin();
 	        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
 
 			// 射影行列をセット
 			matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
@@ -845,27 +1004,39 @@ int main( int argc, char *argv[] )
 			matModel.identity();
 
 			static float rad =0;
-			rad += RAD(1);
+			rad += RAD(1/2.0);
 			matModel.rotX(rad/3);
 			matModel.rotY(rad);
 			matModel.translate(-0.2 , 0.2, 5 );
 			vect44 mat_wf = matModel*matPers;
 			gl_drawModel( model_wf, mat_wf );
 
-		fbo.end();
+		fbo1.end();
 
+		fbo2.begin();
 
-		vect44 m;
-		m.translate(2,1,9);
-		m.scale(1280.0/720.0 * 2.0 ,2,1);
-		vect44 mat_tex = m*matPers;
+			model_gaus_v.m_cntTex=1;
+			model_gaus_v.m_hdlTex[0]=fbo1.m_color_tex;
+			gl_drawModel( model_gaus_v, mIdent );
 
-		gl_drawModelTex( model_tex, mat_tex, fbo.m_color_tex );
+		fbo2.end();
+
+		fbo1.begin();
+
+			model_gaus_h.m_cntTex=1;
+			model_gaus_h.m_hdlTex[0]=fbo2.m_color_tex;
+			gl_drawModel( model_gaus_h, mIdent );
+
+		fbo1.end();
+
+		model_tex.m_cntTex=1;
+		model_tex.m_hdlTex[0]=fbo1.m_color_tex;
+		gl_drawModel( model_tex, mIdent );
 
 
 
 		//---
-		eglSwapBuffers(g_egl.display, g_egl.surface);
+		eglSwapBuffers(infEgl.display, infEgl.surface);
 	}
 	return 0;
 }

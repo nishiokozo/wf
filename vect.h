@@ -407,6 +407,7 @@ public:
 		z = v.z;
 		w = aw;
 	};
+
 	vect4 operator+( const vect4& v )	const//	V + V
 	{
 		vect4	ret;
@@ -690,6 +691,8 @@ public:
 	}
 
 	float* GetArray(){ return m_array; };
+	float* getArray(){ return m_array; };
+	float* toArray(){ return m_array; };
 
 	void identity()
 	{
@@ -829,6 +832,16 @@ public:
 		m[3][0] = m30;	m[3][1] = m31;	m[3][2] = m32;	m[3][3] = m33;
 	}
 
+	vect4 operator*( const vect4& a ) const
+	{
+		vect4 ret;
+		ret.x = m[0][0]*a.x + m[0][1]*a.y + m[0][2]*a.z + m[0][3]*a.w ;
+		ret.y = m[1][0]*a.x + m[1][1]*a.y + m[1][2]*a.z + m[1][3]*a.w ;
+		ret.z = m[2][0]*a.x + m[2][1]*a.y + m[2][2]*a.z + m[2][3]*a.w ;
+		ret.w = m[3][0]*a.x + m[3][1]*a.y + m[3][2]*a.z + m[3][3]*a.w ;
+		return ret;
+	}
+
 	friend	vect4 operator*( const vect4& a, const vect44& m )
 	{
 		vect4 ret;
@@ -837,16 +850,6 @@ public:
 		ret.z = a.x*m.m[0][2] + a.y*m.m[1][2] + a.z*m.m[2][2] + a.w*m.m[3][2] ;
 		ret.w = a.x*m.m[0][3] + a.y*m.m[1][3] + a.z*m.m[2][3] + a.w*m.m[3][3] ;
 
-		return ret;
-	}
-
-	vect4 operator*( const vect4& a ) const
-	{
-		vect4 ret;
-		ret.x = m[0][0]*a.x + m[0][1]*a.y + m[0][2]*a.z + m[0][3]*a.w ;
-		ret.y = m[1][0]*a.x + m[1][1]*a.y + m[1][2]*a.z + m[1][3]*a.w ;
-		ret.z = m[2][0]*a.x + m[2][1]*a.y + m[2][2]*a.z + m[2][3]*a.w ;
-		ret.w = m[3][0]*a.x + m[3][1]*a.y + m[3][2]*a.z + m[3][3]*a.w ;
 		return ret;
 	}
 
@@ -879,7 +882,6 @@ public:
 
 		return	ret;
 	}
-
 /*
 	vect44& operator=( const vect44& a ) 
 	{
@@ -897,6 +899,8 @@ public:
 	}
 
 	float* GetArray(){ return m_array; };
+	float* getArray(){ return m_array; };
+	float* toArray(){ return m_array; };
 
 	void identity()
 	{
@@ -1028,7 +1032,7 @@ public:
 		this->rotZ( rot.z );
 	}
 	//-----------------------------------------------------------------------------
-	void rotX( float f)
+	vect44& rotX( float f)
 	//-----------------------------------------------------------------------------
 	{
 		float	c = cos(f);
@@ -1039,9 +1043,10 @@ public:
 			0,  s,  c,  0,
 			0,  0,  0,  1
 		);
+		return (*this);
 	}
 	//-----------------------------------------------------------------------------
-	void rotY( float f)
+	vect44& rotY( float f)
 	//-----------------------------------------------------------------------------
 	{
 		float	c = cos(f);
@@ -1052,9 +1057,10 @@ public:
 			s,  0,  c,  0,
 			0,  0,  0,  1
 		);
+		return (*this);
 	}
 	//-----------------------------------------------------------------------------
-	void rotZ( float f)
+	vect44& rotZ( float f)
 	//-----------------------------------------------------------------------------
 	{
 		float	c = cos(f);
@@ -1065,6 +1071,7 @@ public:
 			0,  0,  1,  0,
 			0,  0,  0,  1
 		);
+		return (*this);
 	}
 	//-----------------------------------------------------------------------------
 	void setPos( float x, float y, float z )
@@ -1090,8 +1097,21 @@ public:
 		m[3][1] += y;
 		m[3][2] += z;
 	}
-	
+
 	//-----------------------------------------------------------------------------
+	vect44& scale( float s )
+	//-----------------------------------------------------------------------------
+	{
+		*this *= vect44(
+			  s,  0,  0,  0,
+			  0,  s,  0,  0,
+			  0,  s,  s,  0,
+			  0,  0,  0,  1
+		);
+		return (*this);
+	}
+	
+/*	//-----------------------------------------------------------------------------
 	void scale( float x, float y, float z )
 	//-----------------------------------------------------------------------------
 	{
@@ -1107,6 +1127,7 @@ public:
 		m[1][1] *= scale.y;
 		m[2][2] *= scale.z;
 	}
+*/
 
 	//-----------------------------------------------------------------------------
 	void print()

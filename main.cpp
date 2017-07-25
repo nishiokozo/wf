@@ -26,6 +26,7 @@ typedef struct
 } INF_EGL;
 
 
+int		m_hdl_Offset;
 
 //-----------------------------------------------------------------------------
 static void init_egl(INF_EGL& inf)
@@ -140,7 +141,7 @@ public:
 	GLint		m_viewport[4];
 
 //-----------------------------------------------------------------------------
-INF_FBO( int width, int height )
+INF_FBO( int width, int height, GLint val_MAX_MIN_FILTER )
 //-----------------------------------------------------------------------------
 {
 	memset( this, 0, sizeof(*this));
@@ -157,13 +158,30 @@ INF_FBO( int width, int height )
  	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_SHORT_5_6_5,0);	//正常動作
 //	glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_SHORT_4_4_4_4,0); // 動作しない
  #else
- 	glTexImage2D(GL_TEXTURE_2D,0,GL_RGB,width,height,0,GL_RGB,GL_UNSIGNED_BYTE,0);
+ 	GLint	vram_format = GL_RGB;
+ 	GLint	ram_format = GL_RGB;
+ 	GLint	ram_type = GL_UNSIGNED_BYTE;
+ 	GLvoid*	ram_pixels = 0;
+ 	glTexImage2D(
+ 		 GL_TEXTURE_2D
+ 		,0
+ 		,vram_format
+ 		,width
+ 		,height
+ 		,0
+ 		,ram_format
+ 		,ram_type
+ 		,ram_pixels
+ 	);
  #endif
 	glcheck();
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//			0?GL_LINEAR:GL_NEAREST,
+//			0?GL_LINEAR:GL_NEAREST
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, val_MAX_MIN_FILTER);
 	glcheck();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, val_MAX_MIN_FILTER);
 	glcheck();
 
 	glGenFramebuffers(1, &m_hdlFbo);
@@ -289,6 +307,9 @@ struct INF_MODEL
 	GLuint  m_hdlIndex;
 	GLuint  m_hdlprogram;
 	GLuint  m_shaderMat;
+	GLuint  m_shaderTex1;
+	GLuint  m_shaderTex2;
+	GLuint  m_shaderOfs;
 	GLsizei	m_cntIndex;
 	//
 	GLsizei m_stride;
@@ -311,6 +332,9 @@ struct INF_MODEL
 		m_hdlIndex = 0;
 		m_hdlprogram = 0;
 		m_shaderMat = 0;
+		m_shaderTex1 = 0;
+		m_shaderTex2 = 0;
+		m_shaderOfs = 0;
 		m_cntIndex = 0;
 		//
 		m_stride	= 0;
@@ -340,16 +364,16 @@ void	gl_setModel( INF_MODEL& m
 	, int 			sizeVert
 	, const INF_ATTR 	pAttr[]
 	, int 				cntAttr
-	, const INF_UNIFORM	pUniform[]
-	, int 				cntUniform
-	, const INF_TEX		pTex[]
-	, GLvoid*			tex_pixels
+//	, const INF_UNIFORM	pUniform[]
+//	, int 				cntUniform
+//	, const INF_TEX		pTex[]
+//	, GLvoid*			tex_pixels
 )
 {
 
 	m.m_mode = mode;
  	m.m_cntIndex = cntIndex;
-
+/*
 	if( pTex != 0 && m.m_cntTex < m.m_NUM_TEX )
 	{//テクスチャ生成
 		const INF_TEX&	t = pTex[0];
@@ -379,6 +403,7 @@ void	gl_setModel( INF_MODEL& m
 		m.m_cntTex++;
 
 	}
+*/
 	
 	{// 頂点バッファ登録
 		glGenBuffers(1, &m.m_hdlVert);
@@ -431,7 +456,9 @@ void	gl_setModel( INF_MODEL& m
 		glLinkProgram(m.m_hdlprogram);
 	}
 
+
 	{//シェーダー内変数
+#if 0
 		m.m_pUniform = (INF_UNIFORM*)malloc( sizeof(INF_UNIFORM[cntUniform]) );
 		m.m_cntUniform = cntUniform;
 		// 
@@ -442,9 +469,18 @@ void	gl_setModel( INF_MODEL& m
 		 	m.m_pUniform[i].size	= pUniform[i].size;
 
 			m.m_pUniform[i].hdl	= glGetUniformLocation( m.m_hdlprogram, pUniform[i].name );
-//			m.m_pUniform[i].hdl	= glGetUniformLocation( m.m_hdlprogram, "Mat" );
 			glcheck();
 		}
+#else
+			m.m_shaderMat	= glGetUniformLocation( m.m_hdlprogram, "Mat" );
+			glcheck();
+			m.m_shaderTex1	= glGetUniformLocation( m.m_hdlprogram, "Texture" );
+			glcheck();
+			m.m_shaderTex2	= glGetUniformLocation( m.m_hdlprogram, "Texture2" );
+			glcheck();
+			m.m_shaderOfs	= glGetUniformLocation( m.m_hdlprogram, "ofs" );
+			glcheck();
+#endif
 	}
 
 	{// レンダリングパラメータ生成
@@ -479,19 +515,34 @@ void	gl_drawModel( INF_MODEL& m, vect44& mat )
 	glUseProgram( m.m_hdlprogram );
 
 	// テクスチャ
-	if ( m.m_cntTex > 0 )
+//	if ( m.m_cntTex > 0 )
 	{
-		glActiveTexture( GL_TEXTURE0 );
-		glBindTexture( GL_TEXTURE_2D, m.m_hdlTex[0] );
+		for ( int i = 0 ; i < m.m_cntTex ; i++ )
+		{
+			if ( i==0 ) 
+			{
+//				glUniform1i( m.m_shaderTex1, 0);
+				glActiveTexture( GL_TEXTURE0 );
+				glBindTexture( GL_TEXTURE_2D, m.m_hdlTex[i] );
+			}
+			if ( i==1 ) 
+			{
+//				glUniform1i( m.m_shaderTex2, 1);
+				glActiveTexture( GL_TEXTURE1 );
+				glBindTexture( GL_TEXTURE_2D, m.m_hdlTex[i] );
+			}
+		}
 	}
 
 
 	// 頂点
-//	glUniformMatrix4fv( m.m_shaderMat, 1, GL_FALSE, mat.GetArray() );
+#if 0
 	for ( int i = 0 ; i < m.m_cntUniform ; i++ )
 	{
 		switch(  m.m_pUniform[i].size )
 		{
+		case 1:
+//			glUniform1fv( m.m_pUniform[i].hdl, 1, GL_FALSE, mat.GetArray() );
 		case 4:
 			glUniformMatrix4fv( m.m_pUniform[i].hdl, 1, GL_FALSE, mat.GetArray() );
 			break;
@@ -499,7 +550,16 @@ void	gl_drawModel( INF_MODEL& m, vect44& mat )
 			assert(0);
 		}
 	}
-
+#else
+	glUniformMatrix4fv( m.m_shaderMat, 1, GL_FALSE, mat.GetArray() );
+#endif
+//	glUniform4f(m_hdl_Offset, 1.0/1280.0,1.0/720.0,0,0 );
+	{
+		GLfloat		m_viewport[4];
+		glGetFloatv( GL_VIEWPORT, m_viewport );
+		glUniform2f(m.m_shaderOfs, 1.0/m_viewport[2] , 1.0/m_viewport[3] );
+//printf("%f %f\n", m_viewport[2], m_viewport[3] );
+	}
 
 	glBindBuffer( GL_ARRAY_BUFFER,  m.m_hdlVert );
 
@@ -521,46 +581,73 @@ void	gl_drawModel( INF_MODEL& m, vect44& mat )
 
 	glDrawElements( m.m_mode, m.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
 }
-
 //-----------------------------------------------------------------------------
-class InfFile
+void	gl_drawModelTex1( INF_MODEL& m, vect44& mat, GLuint hdlTex )
 //-----------------------------------------------------------------------------
 {
-public:
-	FILE*	m_fp;
-	int		m_len;
-	bool	m_error;
-	char*	m_pBuf;
+	m.m_cntTex=1;
+	m.m_hdlTex[0]=hdlTex;
+	gl_drawModel( m, mat );
+}
+//-----------------------------------------------------------------------------
+void	gl_drawModelTex2( INF_MODEL& m, vect44& mat, GLuint hdlTex1, GLuint hdlTex2 )
+//-----------------------------------------------------------------------------
+{
+	m.m_cntTex=2;
+	m.m_hdlTex[0]=hdlTex1;
+	m.m_hdlTex[1]=hdlTex2;
+	gl_drawModel( m, mat );
+}
+//-----------------------------------------------------------------------------
+void	gl_drawModelTex2b ( INF_MODEL& m, vect44& mat, GLuint hdlTex1, GLuint hdlTex2 )
+//-----------------------------------------------------------------------------
+{
+	glUseProgram( m.m_hdlprogram );
+glcheck();
 
-	InfFile( const char* fn )
+	glUniformMatrix4fv( m.m_shaderMat, 1, GL_FALSE, mat.GetArray() );
+glcheck();
+
+	glBindBuffer( GL_ARRAY_BUFFER,  m.m_hdlVert );
+glcheck();
+
+	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER,  m.m_hdlIndex );
+glcheck();
+
+	for ( int i = 0 ; i < m.m_cntAttr ; i++ )
 	{
-		m_pBuf = 0;
-		if ((m_fp = fopen(fn, "rb")) == NULL) 
-		{
-			m_error = true;
-			return;
-		}
-		else
-		{
-			fseek(m_fp, 0, SEEK_END);
-			m_len = (int)ftell(m_fp);
-			fseek(m_fp, 0, SEEK_SET);
-
-			m_pBuf = (char*)malloc( m_len );
-			fread( m_pBuf, 1, m_len, m_fp);
-
-			fclose( m_fp );
-		
-		}
+		glEnableVertexAttribArray( m.m_pAttr[i].hdl );
+		glVertexAttribPointer( 
+			  m.m_pAttr[i].hdl
+			, m.m_pAttr[i].size
+			, GL_FLOAT
+			, GL_FALSE
+			, m.m_stride
+			, m.m_pAttr[i].pOfs 
+		);
+glcheck();
 	}
+	glEnableVertexAttribArray(0);
+glcheck();
 
-	~InfFile()
-	{
-		fclose( m_fp );
-		free( m_pBuf );
-	}
+	glActiveTexture( GL_TEXTURE0 );
+glcheck();
+	glBindTexture( GL_TEXTURE_2D, hdlTex2 );
+glcheck();
 
-};
+	glActiveTexture( GL_TEXTURE1 );
+glcheck();
+	glBindTexture( GL_TEXTURE_2D, hdlTex1 );
+glcheck();
+	glUniform1i(glGetUniformLocation(m.m_hdlprogram, "Texture"), 0);
+glcheck();
+	glUniform1i(glGetUniformLocation(m.m_hdlprogram, "Texture2"), 1);
+glcheck();
+
+	glDrawElements( m.m_mode, m.m_cntIndex, GL_UNSIGNED_SHORT, 0 );
+glcheck();
+}
+
 //-----------------------------------------------------------------------------
 bool	file_malloc_Load( const char* fname, char** ppBuf )
 //-----------------------------------------------------------------------------
@@ -605,6 +692,27 @@ int main( int argc, char *argv[] )
 	init_egl(infEgl);
 	printf("%dx%d\n", infEgl.width, infEgl.height );
 
+	{
+        GLint   vert_vectors = 0;
+        GLint   frag_vectors = 0;
+        glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &vert_vectors);
+        glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_VECTORS, &frag_vectors);
+		printf("vector  %d,%d\n", vert_vectors, frag_vectors );
+	}        
+	{
+        GLint   textureUnits = 0;
+        glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &textureUnits);
+		printf("textureUnits  %d\n", textureUnits );
+    }
+    {
+	   printf( "%s\n", glGetString(GL_VENDOR) );
+	   printf( "%s\n", glGetString(GL_RENDERER) );
+	   printf( "%s\n", glGetString(GL_VERSION) );
+	   printf( "%s\n", glGetString(GL_EXTENSIONS) );
+    }
+	 printf( "\n--start--\n" );
+
+        
 	INF_MODEL model_wf;
 	{
 		INF_ATTR infAttr[] = 
@@ -613,11 +721,11 @@ int main( int argc, char *argv[] )
 		};
 		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
 
-		INF_UNIFORM infUniform[] = 
-		{
-			{"Mat"	, 4},
-		};
-		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+//		INF_UNIFORM infUniform[] = 
+//		{
+//			{"Mat"	, 4},
+//		};
+//		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
 
 		GLfloat tblVert[] = 
 		{
@@ -660,11 +768,7 @@ int main( int argc, char *argv[] )
 		const GLchar *srcFlag =
 			"void main()														\n"
 			"{																	\n"
-			"																	\n"
-			"																	\n"
-			"																	\n"
-			"																	\n"
-			"	gl_FragColor = vec4( 1,1, 1, 1.0);								\n"
+			"	gl_FragColor = vec4( 0,1, 0, 1.0);								\n"
 			"}																	\n"
 		;
 
@@ -679,9 +783,9 @@ int main( int argc, char *argv[] )
 			, sizeof(tblVert)
 			, infAttr
 			, cntAttr
-			, infUniform
-			, cntUniform
-			, 0,0
+//			, infUniform
+//			, cntUniform
+//			, 0,0
 		);
 
 	}
@@ -695,11 +799,11 @@ int main( int argc, char *argv[] )
 		};
 		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
 
-		INF_UNIFORM infUniform[] = 
-		{
-			{"Mat"	, 4},
-		};
-		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+//		INF_UNIFORM infUniform[] = 
+//		{
+//			{"Mat"	, 4},
+//		};
+//		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
 
 		GLfloat tblVert[] = 
 		{
@@ -732,17 +836,17 @@ int main( int argc, char *argv[] )
 			"void main()														\n"
 			"{																	\n"
 			"	gl_FragColor = texture2D(uTexture,vec2(uv.x,uv.y));				\n"
-			"}																																							\n"
+			"}																	\n"
 		;
-
+/*
 		INF_TEX	infTex(
-			GL_RGBA,
-			2,
-			2,
-			0?GL_REPEAT:(1?GL_CLAMP_TO_EDGE:GL_MIRRORED_REPEAT),
-			0?GL_REPEAT:(1?GL_CLAMP_TO_EDGE:GL_MIRRORED_REPEAT),
-			0?GL_LINEAR:GL_NEAREST,
-			0?GL_LINEAR:GL_NEAREST
+			  GL_RGBA
+			, 2
+			, 2
+			, 0?GL_REPEAT:(1?GL_CLAMP_TO_EDGE:GL_MIRRORED_REPEAT)
+			, 0?GL_REPEAT:(1?GL_CLAMP_TO_EDGE:GL_MIRRORED_REPEAT)
+			, 1?GL_LINEAR:GL_NEAREST
+			, 1?GL_LINEAR:GL_NEAREST
 		);
 		GLvoid*	tex_pixels=0;
 		{// テクスチャ生成
@@ -759,7 +863,7 @@ int main( int argc, char *argv[] )
 				}
 			}
 		}			
-            
+*/            
 		gl_setModel( 
 			  model_tex
 			, tblVert
@@ -771,9 +875,105 @@ int main( int argc, char *argv[] )
 			, sizeof(tblVert)
 			, infAttr
 			, cntAttr
-			, infUniform
-			, cntUniform
-			, &infTex, tex_pixels
+//			, infUniform
+//			, cntUniform
+//			, &infTex, tex_pixels
+		);
+	}
+
+	INF_MODEL model_add;
+	{
+		INF_ATTR infAttr[] = 
+		{
+			{"Pos"	, (void*)(0),	3},		//Pos
+			{"Uv"	, (void*)(12),	2},		//Uv
+		};
+		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
+
+//		INF_UNIFORM infUniform[] = 
+//		{
+//			{"Mat"	, 4},
+//		};
+//		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+
+		GLfloat tblVert[] = 
+		{
+		   -1,-1, 0 ,	 0, 0,
+		    1,-1, 0 ,	 1, 0,
+		   -1, 1, 0 ,	 0, 1,
+		    1, 1, 0 ,	 1, 1,
+		};
+		GLushort tblIndex[] = 
+		{
+			0,1,2,3,
+		};
+		int cntIndex = sizeof(tblIndex)/sizeof(GLushort);
+		
+		const GLchar *srcVert = // GLSLは列ｘ行。なので左からマトリクスをかける
+			"uniform mat4	Mat;												\n"
+			"attribute vec3	Pos;												\n"
+			"attribute vec2	Uv;													\n"
+			"varying vec2	uv;													\n"
+			"void main() 														\n"
+			"{ 																	\n"
+			"	uv = Uv;														\n"
+			"	 gl_Position = Mat * vec4(Pos,1);								\n" // 左から掛ける
+			"}								 									\n"
+		;
+		const GLchar *srcFlag =
+			"precision mediump float;											\n"
+			"varying	vec2 uv;												\n"
+			"uniform sampler2D Texture;										\n"
+			"uniform sampler2D Texture2;										\n"
+			"void main()														\n"
+			"{																	\n"
+			"	gl_FragColor = ( texture2D(Texture,vec2(uv.x,uv.y))				\n"
+			"					+texture2D(Texture2,vec2(uv.x,uv.y)));				\n"
+			"}																																							\n"
+		;
+/*
+		INF_TEX	infTex(
+			  GL_RGBA
+			, 2
+			, 2
+			, 0?GL_REPEAT:(1?GL_CLAMP_TO_EDGE:GL_MIRRORED_REPEAT)
+			, 0?GL_REPEAT:(1?GL_CLAMP_TO_EDGE:GL_MIRRORED_REPEAT)
+			, 1?GL_LINEAR:GL_NEAREST	//MAG
+			, 1?GL_LINEAR:GL_NEAREST	//MIN
+		);
+		
+		GLvoid*	tex_pixels=0;
+		{// テクスチャ生成
+			//テクスチャデータ作成
+			tex_pixels=(GLvoid*)malloc( infTex.m_width * infTex.m_height * 3);
+
+			for ( int y = 0 ; y < infTex.m_height ; y++ )
+			{
+				for ( int x = 0 ; x < infTex.m_width ; x++ )
+				{
+					((char*)tex_pixels)[(y*infTex.m_width+x)*3+0] =x*100;
+					((char*)tex_pixels)[(y*infTex.m_width+x)*3+1] =y*100;
+					((char*)tex_pixels)[(y*infTex.m_width+x)*3+2] =55;
+				}
+			}
+		}			
+            
+*/
+		gl_setModel( 
+			  model_add
+			, tblVert
+			, tblIndex
+			, srcVert
+			, srcFlag
+			, cntIndex
+			, GL_TRIANGLE_STRIP
+			, sizeof(tblVert)
+			, infAttr
+			, cntAttr
+//			, infUniform
+//			, cntUniform
+//			, &infTex, tex_pixels
+//			,0,0
 		);
 	}
 	
@@ -786,11 +986,11 @@ int main( int argc, char *argv[] )
 		};
 		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
 
-		INF_UNIFORM infUniform[] = 
-		{
-			{"Mat"	, 4},
-		};
-		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+//		INF_UNIFORM infUniform[] = 
+//		{
+//			{"Mat"	, 4},
+//		};
+//		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
 		
 		GLfloat tblVert[] = 
 		{
@@ -820,41 +1020,44 @@ int main( int argc, char *argv[] )
 		const GLchar *srcFlag = 
 			"uniform sampler2D	Tex;											\n"
 			"varying	vec2	uv;												\n"
-			"uniform float	ofs;												\n"
+			"uniform vec2	ofs;												\n"
 			"																	\n"
 			"void main (void)													\n"
 			"{																	\n"
 			"	vec4	col = vec4( 0.0, 0.0, 0.0, 1.0 );						\n"
-			"	float	ofs = 1.0/(720.0/2.0);									\n"
+//			"	float	ofs = 1.0/(720.0/2.0);									\n"
 			"																	\n"
 			"	col  = texture2D( Tex, uv ) * 0.133176 ;						\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*1.0 ) ) * 0.125979;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*1.0 ) ) * 0.125979;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*1.0 ) ) * 0.125979;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*1.0 ) ) * 0.125979;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*2.0 ) ) * 0.106639;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*2.0 ) ) * 0.106639;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*2.0 ) ) * 0.106639;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*2.0 ) ) * 0.106639;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*3.0 ) ) * 0.080775;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*3.0 ) ) * 0.080775;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*3.0 ) ) * 0.080775;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*3.0 ) ) * 0.080775;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*4.0 ) ) * 0.054750;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*4.0 ) ) * 0.054750;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*4.0 ) ) * 0.054750;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*4.0 ) ) * 0.054750;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*5.0 ) ) * 0.033208;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*5.0 ) ) * 0.033208;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*5.0 ) ) * 0.033208;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*5.0 ) ) * 0.033208;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*6.0 ) ) * 0.018023;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*6.0 ) ) * 0.018023;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*6.0 ) ) * 0.018023;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*6.0 ) ) * 0.018023;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*7.0 ) ) * 0.008753;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*7.0 ) ) * 0.008753;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*7.0 ) ) * 0.008753;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*7.0 ) ) * 0.008753;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*8.0 ) ) * 0.003804;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*8.0 ) ) * 0.003804;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*8.0 ) ) * 0.003804;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*8.0 ) ) * 0.003804;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  0,  ofs*9.0 ) ) * 0.001479;	\n"
-			"	col += texture2D(Tex, uv + vec2(  0, -ofs*9.0 ) ) * 0.001479;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0,  ofs.y*9.0 ) ) * 0.001479;	\n"
+			"	col += texture2D(Tex, uv + vec2(  0, -ofs.y*9.0 ) ) * 0.001479;	\n"
+			"																	\n"
+			"	col = min(vec4(1.0,1.0,1.0,1.0), col*1.7);						\n"//輝度を倍
+			"																	\n"
 			"	gl_FragColor = col;												\n"
 			"}																	\n"
 		;
@@ -869,9 +1072,9 @@ int main( int argc, char *argv[] )
 			, sizeof(tblVert)
 			, infAttr
 			, cntAttr
-			, infUniform
-			, cntUniform
-			, 0, 0
+//			, infUniform
+//			, cntUniform
+//			, 0, 0
 		);
 	}
 	INF_MODEL model_gaus_h;
@@ -883,11 +1086,11 @@ int main( int argc, char *argv[] )
 		};
 		int cntAttr = sizeof(infAttr)/sizeof(INF_ATTR);
 		
-		INF_UNIFORM infUniform[] = 
-		{
-			{"Mat"	, 4},
-		};
-		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
+//		INF_UNIFORM infUniform[] = 
+//		{
+//			{"Mat"	, 4},
+//		};
+//		int cntUniform = sizeof(infUniform)/sizeof(INF_UNIFORM);
 
 		GLfloat tblVert[] = 
 		{
@@ -907,50 +1110,55 @@ int main( int argc, char *argv[] )
 			"attribute vec3 Pos;												\n"
 			"attribute vec2 Uv;													\n"
 			"varying	vec2 uv;												\n"
+			"uniform vec2	ofs;												\n"
 			"void main(void)													\n"
 			"{																	\n"
-			"	uv = Uv;														\n"
+			"	uv = Uv-vec2(ofs.x*2.0,0);														\n"
 			"	gl_Position = Mat * vec4(Pos,1);								\n"
 			"}																																							\n"
 		;
 //		file_malloc_Load( "gaussian-h.fs", &srcFlag );
 		const GLchar *srcFlag =
 			"uniform sampler2D	Tex;																																						\n"
-			"varying	vec2	uv;												\n"
-			"uniform float	ofset;												\n"
+			"varying vec2	uv;												\n"
+			"uniform vec2	ofs;												\n"
 			"																	\n"
 			"void main (void)													\n"
 			"{																	\n"
 			"	vec4	col = vec4( 0.0, 0.0, 0.0, 1.0 );						\n"
-			"	float	ofs = 1.0/(1280.0/2.0);									\n"
+//			"	float	ofs = 1.0/(1280.0/2.0);									\n"
+			"																	\n"
+			"																	\n"
 			"	col  = texture2D( Tex, uv ) * 0.133176 ;						\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*1.0, 0 ) ) * 0.125979;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*1.0, 0 ) ) * 0.125979;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*1.0, 0 ) ) * 0.125979;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*1.0, 0 ) ) * 0.125979;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*2.0, 0 ) ) * 0.106639;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*2.0, 0 ) ) * 0.106639;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*2.0, 0 ) ) * 0.106639;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*2.0, 0 ) ) * 0.106639;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*3.0, 0 ) ) * 0.080775;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*3.0, 0 ) ) * 0.080775;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*3.0, 0 ) ) * 0.080775;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*3.0, 0 ) ) * 0.080775;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*4.0, 0 ) ) * 0.054750;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*4.0, 0 ) ) * 0.054750;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*4.0, 0 ) ) * 0.054750;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*4.0, 0 ) ) * 0.054750;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*5.0, 0 ) ) * 0.033208;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*5.0, 0 ) ) * 0.033208;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*5.0, 0 ) ) * 0.033208;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*5.0, 0 ) ) * 0.033208;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*6.0, 0 ) ) * 0.018023;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*6.0, 0 ) ) * 0.018023;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*6.0, 0 ) ) * 0.018023;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*6.0, 0 ) ) * 0.018023;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*7.0, 0 ) ) * 0.008753;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*7.0, 0 ) ) * 0.008753;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*7.0, 0 ) ) * 0.008753;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*7.0, 0 ) ) * 0.008753;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*8.0, 0 ) ) * 0.003804;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*8.0, 0 ) ) * 0.003804;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*8.0, 0 ) ) * 0.003804;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*8.0, 0 ) ) * 0.003804;	\n"
 			"																	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*9.0, 0 ) ) * 0.001479;	\n"
-			"	col += texture2D(Tex, uv + vec2(  ofs*9.0, 0 ) ) * 0.001479;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*9.0, 0 ) ) * 0.001479;	\n"
+			"	col += texture2D(Tex, uv + vec2(  ofs.x*9.0, 0 ) ) * 0.001479;	\n"
+			"																	\n"
+			"	col = min(vec4(1.0,1.0,1.0,1.0), col*1.7);						\n"//輝度を倍
 			"																	\n"
 			"	gl_FragColor = col;												\n"
 			"}																	\n"
@@ -966,15 +1174,19 @@ int main( int argc, char *argv[] )
 			, sizeof(tblVert)
 			, infAttr
 			, cntAttr
-			, infUniform
-			, cntUniform
-			, 0,0
+//			, infUniform
+//			, cntUniform
+//			, 0,0
 		);
 	}
 	
 
-	INF_FBO	fbo1( 1280/2, 720/2 );
-	INF_FBO	fbo2( 1280/2, 720/2 );
+	INF_FBO	fbo0( 1280, 720, GL_LINEAR );
+	INF_FBO	fbo1( 1280, 720, GL_LINEAR );
+	INF_FBO	fbo2a( 1280/2, 720/2, GL_LINEAR );
+	INF_FBO	fbo2b( 1280/2, 720/2, GL_LINEAR );
+	INF_FBO	fbo4a( 1280/4, 720/4, GL_LINEAR );
+	INF_FBO	fbo4b( 1280/4, 720/4, GL_LINEAR );
 	
 
 	vect44	matPers;
@@ -994,7 +1206,8 @@ int main( int argc, char *argv[] )
 		glViewport(0, 0, infEgl.width, infEgl.height);
 
 
-		fbo1.begin();
+		fbo0.begin();
+
 	        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 			// 射影行列をセット
@@ -1005,35 +1218,46 @@ int main( int argc, char *argv[] )
 
 			static float rad =0;
 			rad += RAD(1/2.0);
+//			rad = 2;
 			matModel.rotX(rad/3);
 			matModel.rotY(rad);
-			matModel.translate(-0.2 , 0.2, 5 );
+			matModel.translate(2, 0, 6 );
 			vect44 mat_wf = matModel*matPers;
 			gl_drawModel( model_wf, mat_wf );
 
-		fbo1.end();
+#if 1
+			fbo2a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo0.m_color_tex );
+			fbo4a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo2a.m_color_tex );
+			fbo4b.begin();	gl_drawModelTex1( model_gaus_v, mIdent, fbo4a.m_color_tex );
+			fbo4a.begin();	gl_drawModelTex1( model_gaus_h, mIdent, fbo4b.m_color_tex );
 
-		fbo2.begin();
+		fbo0.end();
 
-			model_gaus_v.m_cntTex=1;
-			model_gaus_v.m_hdlTex[0]=fbo1.m_color_tex;
-			gl_drawModel( model_gaus_v, mIdent );
+		gl_drawModelTex2b( model_add, mIdent, fbo4a.m_color_tex, fbo0.m_color_tex );
+#else
+			fbo2a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo0.m_color_tex );
+			fbo2b.begin();	gl_drawModelTex1( model_gaus_v, mIdent, fbo2a.m_color_tex );
+			fbo2a.begin();	gl_drawModelTex1( model_gaus_h, mIdent, fbo2b.m_color_tex );
 
-		fbo2.end();
+		fbo0.end();
 
-		fbo1.begin();
-
-			model_gaus_h.m_cntTex=1;
-			model_gaus_h.m_hdlTex[0]=fbo2.m_color_tex;
-			gl_drawModel( model_gaus_h, mIdent );
-
-		fbo1.end();
-
-		model_tex.m_cntTex=1;
-		model_tex.m_hdlTex[0]=fbo1.m_color_tex;
-		gl_drawModel( model_tex, mIdent );
+		gl_drawModelTex2b( model_add, mIdent, fbo2a.m_color_tex, fbo0.m_color_tex );
 
 
+#endif
+
+		{
+			matModel.identity();
+
+			static float rad =0;
+			rad += RAD(1/2.0);
+//			rad = 2;
+			matModel.rotX(rad/3);
+			matModel.rotY(rad);
+			matModel.translate(-2, 0, 6 );
+			vect44 mat_wf = matModel*matPers;
+			gl_drawModel( model_wf, mat_wf );
+		}
 
 		//---
 		eglSwapBuffers(infEgl.display, infEgl.surface);

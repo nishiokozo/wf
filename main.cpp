@@ -821,9 +821,10 @@ int main( int argc, char *argv[] )
 		const GLchar *srcFlag =
 			"void main()														\n"
 			"{																	\n"
+//			"	vec4	col = vec4( 0.0, 1.0, 0.0, 1.0 );						\n"
 			"	vec4	col = vec4( 0.0, 1.0, 0.0, 1.0 );						\n"
 //			"	gl_FragColor = vec4( 1,1, 1, 1.0);								\n"
-			"	col = min(vec4(1.0,1.0,1.0,1.0), col);						\n"//ãPìxÇî{
+			"	col = min(vec4(1.0, 1.0, 1.0, 1.0), col);						\n"//ãPìxÇî{
 			"																	\n"
 			"	gl_FragColor = col;												\n"
 			"}																	\n"
@@ -1076,7 +1077,7 @@ int main( int argc, char *argv[] )
 			"void main (void)													\n"
 			"{																	\n"
 			"	vec4	col = vec4( 0.0, 0.0, 0.0, 1.0 );						\n"
-			"	float a = 2.0;													\n"
+			"	float a = 1.0;													\n"
 			"																	\n"
 			"	col  = a*texture2D( Tex, uv ) * 0.133176 ;						\n"
 			"																	\n"
@@ -1237,7 +1238,6 @@ int main( int argc, char *argv[] )
 	glClearColor(0.15f, 0.25f, 0.35f, 1.0f);
 
 	vect44 mIdent;	
-
 	while(1) 
 	{
 		glClearColor(0, 0, 0, 1.0f);
@@ -1249,9 +1249,6 @@ int main( int argc, char *argv[] )
 			rad += RAD(1/2.0);
 //		rad = 2;
 
-		fbo1a.begin();
-
-	        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 			// éÀâeçsóÒÇÉZÉbÉg
 			matPers.setPerspective( 27.5f, 1920.0/1080.0 ); 
@@ -1263,14 +1260,24 @@ int main( int argc, char *argv[] )
 			matModel.rotY(-rad);
 			matModel.translate(2, 0, 6 );
 			vect44 mat_wf = matModel*matPers;
+
+		fbo1a.begin();
+			glLineWidth(16);
+	        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 			gl_drawModel( model_wf, mat_wf );
 
-#if 1
+		fbo1b.begin();
+			glLineWidth(1);
+	        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+			gl_drawModel( model_wf, mat_wf );
+
+#if 0
 			// ëæê¸
 			fbo1b.begin();	gl_drawModelBoid4( model_boid4, mIdent, fbo1a.m_color_tex );
+//			fbo1a.begin();	gl_drawModelBoid4( model_boid4, mIdent, fbo1b.m_color_tex );
 
 			// 1/8
-			fbo2a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo1b.m_color_tex );
+			fbo2a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo1a.m_color_tex );
 			fbo4a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo2a.m_color_tex );
 			fbo8a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo4a.m_color_tex );
 
@@ -1283,7 +1290,7 @@ int main( int argc, char *argv[] )
 //		gl_drawModelTex1( model_add, mIdent, fbo8a.m_color_tex );
 
 #endif
-#if 0
+#if 1
 			// 1/8
 			fbo2a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo1a.m_color_tex );
 			fbo4a.begin();	gl_drawModelTex1( model_tex, mIdent, fbo2a.m_color_tex );
@@ -1294,7 +1301,7 @@ int main( int argc, char *argv[] )
 
 		fbo1a.end();
 
-		gl_drawModelTex2b( model_add, mIdent, fbo8a.m_color_tex, fbo1a.m_color_tex );
+		gl_drawModelTex2b( model_add, mIdent, fbo8a.m_color_tex, fbo1b.m_color_tex );
 //		gl_drawModelTex1( model_add, mIdent, fbo8a.m_color_tex );
 #endif
 #if 0
@@ -1307,7 +1314,7 @@ int main( int argc, char *argv[] )
 
 		fbo1a.end();
 
-		gl_drawModelTex2b( model_add, mIdent, fbo4a.m_color_tex, fbo1a.m_color_tex );
+		gl_drawModelTex2b( model_add, mIdent, fbo4a.m_color_tex, fbo1b.m_color_tex );
 //		gl_drawModelTex1( model_add, mIdent, fbo8a.m_color_tex );
 #endif
 #if 0
@@ -1334,6 +1341,7 @@ int main( int argc, char *argv[] )
 			matModel.rotY(rad);
 			matModel.translate(-2, 0, 6 );
 			vect44 mat_wf = matModel*matPers;
+			glLineWidth(1);
 			gl_drawModel( model_wf, mat_wf );
 		}
 
